@@ -1,4 +1,4 @@
-module src
+module app/src
 
 go 1.21
 

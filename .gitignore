@@ -8,6 +8,44 @@ bin/
 *.test
 *.out
 
+# Go build
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go modules
+vendor/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+*.env
+.env*
+
+# Atlas
+atlas.hcl
+
+# Migrations
+migrations/
+app/migrations/
+
+# Logs
+*.log
+
+# その他
+node_modules/
+
 # Env
 .env
 
