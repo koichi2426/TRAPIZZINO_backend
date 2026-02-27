@@ -59,7 +59,8 @@ atlas migrate hash --dir "file://app/migrations"
 # スキーマを適用（--urlは.envの値に合わせて調整）
 atlas migrate apply \
   --dir "file://app/migrations" \
-  --url "postgres://user:password@localhost:5432/trapizzino?sslmode=disable"
+  --url "postgres://user:password@localhost:5432/trapizzino?sslmode=disable" \
+  --allow-dirty
 ```
 
 ### 4. 動作確認
