@@ -30,15 +30,12 @@ vendor/
 Thumbs.db
 
 # Docker
-*.env
-.env*
+.env
+.env.local
+.env.production
 
 # Atlas
 atlas.hcl
-
-# Migrations
-migrations/
-app/migrations/
 
 # Logs
 *.log
