@@ -33,14 +33,33 @@ docker-compose up -d --build
 
 ### 3. データベースマイグレーション
 
-Atlas を使用して、`migrations/` 内の SQL スキーマをデータベースに適用します。
+Atlas を使用して、`app/migrations/` 内の SQL スキーマをデータベースに適用します。
+
+> ⚠️ **DB接続URLのユーザー名・パスワード・DB名などは、必ず `app/.env` または `app/.env.example` の値を参照して設定してください。**
+> 例：
+>   DB_USER=user
+>   DB_PASSWORD=password
+>   DB_NAME=trapizzino
+> の場合、
+>   --url "postgres://user:password@localhost:5432/trapizzino?sslmode=disable"
+> となります。
+
+#### ✅ チェックサムエラーが出た場合
+
+Atlasはマイグレーションファイルの整合性を保つため、チェックサムファイル（atlas.sum）を利用します。
+もし `checksum file not found` や `checksum error` が出た場合は、下記コマンドでチェックサムファイルを再生成してください。
 
 ```bash
-# スキーマを適用（URLは環境に合わせて調整）
-atlas migrate apply \
-  --dir "file://migrations" \
-  --url "postgres://user:pass@localhost:5432/dbname?sslmode=disable"
+atlas migrate hash --dir "file://app/migrations"
+```
 
+このコマンドは app/migrations ディレクトリ内のマイグレーションファイルのハッシュ情報を生成し、atlas.sumファイルを作成します。
+
+```bash
+# スキーマを適用（--urlは.envの値に合わせて調整）
+atlas migrate apply \
+  --dir "file://app/migrations" \
+  --url "postgres://user:password@localhost:5432/trapizzino?sslmode=disable"
 ```
 
 ### 4. 動作確認
