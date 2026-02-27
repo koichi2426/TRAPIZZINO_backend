@@ -40,9 +40,10 @@ func (r *SpotRepository) FindByID(id value_objects.ID) (*entities.Spot, error) {
 	mesh, _ := value_objects.NewMeshID(lat, lng)
 	latitude, _ := value_objects.NewLatitude(lat)
 	longitude, _ := value_objects.NewLongitude(lng)
+	spotName, _ := value_objects.NewSpotName(name)
 	return &entities.Spot{
 		ID:        spotID,
-		Name:      name,
+		Name:      spotName,
 		MeshID:    mesh,
 		Latitude:  latitude,
 		Longitude: longitude,
@@ -68,9 +69,10 @@ func (r *SpotRepository) FindByMeshID(meshID value_objects.MeshID) ([]*entities.
 		meshVO, _ := value_objects.NewMeshID(lat, lng)
 		latitude, _ := value_objects.NewLatitude(lat)
 		longitude, _ := value_objects.NewLongitude(lng)
+		spotName, _ := value_objects.NewSpotName(name)
 		spots = append(spots, &entities.Spot{
 			ID:        spotID,
-			Name:      name,
+			Name:      spotName,
 			MeshID:    meshVO,
 			Latitude:  latitude,
 			Longitude: longitude,

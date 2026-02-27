@@ -16,6 +16,6 @@ func NewRecommendationPresenter() usecase.DistillRecommendationPresenter {
 func (p *recommendationPresenter) Output(spot *entities.Spot) *usecase.DistillRecommendationOutput {
 	return &usecase.DistillRecommendationOutput{
 		SpotID:   spot.ID.Value(),
-		SpotName: spot.Name,
+		SpotName: spot.Name.String(),
 	}
 }

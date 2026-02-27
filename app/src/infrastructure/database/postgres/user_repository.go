@@ -36,11 +36,13 @@ func (r *UserRepository) FindByID(id value_objects.ID) (*entities.User, error) {
 	}
 	userID, _ := value_objects.NewID(uid)
 	emailVO, _ := value_objects.NewEmail(email)
+	uname, _ := value_objects.NewUsername(username)
+	hashVO, _ := value_objects.NewHashedPassword(hashedPassword)
 	return &entities.User{
 		ID:             userID,
-		Username:       username,
+		Username:       uname,
 		Email:          emailVO,
-		HashedPassword: hashedPassword,
+		HashedPassword: hashVO,
 	}, nil
 }
 
@@ -54,11 +56,13 @@ func (r *UserRepository) FindByEmail(email value_objects.Email) (*entities.User,
 	}
 	userID, _ := value_objects.NewID(uid)
 	emailVO, _ := value_objects.NewEmail(emailStr)
+	uname, _ := value_objects.NewUsername(username)
+	hashVO, _ := value_objects.NewHashedPassword(hashedPassword)
 	return &entities.User{
 		ID:             userID,
-		Username:       username,
+		Username:       uname,
 		Email:          emailVO,
-		HashedPassword: hashedPassword,
+		HashedPassword: hashVO,
 	}, nil
 }
 

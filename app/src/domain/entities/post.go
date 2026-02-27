@@ -8,9 +8,9 @@ import (
 type Post struct {
 	ID        value_objects.ID
 	UserID    value_objects.ID
-	Username  string
+	Username  value_objects.Username
 	ImageURL  value_objects.ImageURL
-	Caption   string
+	Caption   value_objects.Caption
 	PostedAt  time.Time
 }
 
@@ -23,16 +23,24 @@ func NewPost(id, userID int, username, imageURL, caption string, postedAt time.T
 	if err != nil {
 		return nil, err
 	}
+	uname, err := value_objects.NewUsername(username)
+	if err != nil {
+		return nil, err
+	}
 	imgURL, err := value_objects.NewImageURL(imageURL)
+	if err != nil {
+		return nil, err
+	}
+	capVO, err := value_objects.NewCaption(caption)
 	if err != nil {
 		return nil, err
 	}
 	return &Post{
 		ID:       pid,
 		UserID:   uid,
-		Username: username,
+		Username: uname,
 		ImageURL: imgURL,
-		Caption:  caption,
+		Caption:  capVO,
 		PostedAt: postedAt,
 	}, nil
 }

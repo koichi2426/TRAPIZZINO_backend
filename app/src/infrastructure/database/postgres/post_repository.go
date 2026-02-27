@@ -38,11 +38,12 @@ func (r *PostRepository) FindByID(id value_objects.ID) (*entities.Post, error) {
 	postID, _ := value_objects.NewID(pid)
 	userIDVO, _ := value_objects.NewID(userID)
 	imgURL, _ := value_objects.NewImageURL(imageURL)
+	capVO, _ := value_objects.NewCaption(caption)
 	return &entities.Post{
 		ID:       postID,
 		UserID:   userIDVO,
 		ImageURL: imgURL,
-		Caption:  caption,
+		Caption:  capVO,
 		PostedAt: postedAt.Time,
 	}, nil
 }
@@ -65,11 +66,12 @@ func (r *PostRepository) FindBySpotID(spotID value_objects.ID) ([]*entities.Post
 		postID, _ := value_objects.NewID(pid)
 		userIDVO, _ := value_objects.NewID(userID)
 		imgURL, _ := value_objects.NewImageURL(imageURL)
+		capVO, _ := value_objects.NewCaption(caption)
 		posts = append(posts, &entities.Post{
 			ID:       postID,
 			UserID:   userIDVO,
 			ImageURL: imgURL,
-			Caption:  caption,
+			Caption:  capVO,
 			PostedAt: postedAt.Time,
 		})
 	}

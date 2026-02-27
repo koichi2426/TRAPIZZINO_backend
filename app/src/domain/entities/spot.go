@@ -6,7 +6,7 @@ import (
 
 type Spot struct {
 	ID        value_objects.ID
-	Name      string
+	Name      value_objects.SpotName
 	MeshID    value_objects.MeshID
 	Latitude  value_objects.Latitude
 	Longitude value_objects.Longitude
@@ -14,6 +14,10 @@ type Spot struct {
 
 func NewSpot(id int, name string, lat, lng float64) (*Spot, error) {
 	spotID, err := value_objects.NewID(id)
+	if err != nil {
+		return nil, err
+	}
+	spotName, err := value_objects.NewSpotName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +35,7 @@ func NewSpot(id int, name string, lat, lng float64) (*Spot, error) {
 	}
 	return &Spot{
 		ID:        spotID,
-		Name:      name,
+		Name:      spotName,
 		MeshID:    meshID,
 		Latitude:  latitude,
 		Longitude: longitude,
