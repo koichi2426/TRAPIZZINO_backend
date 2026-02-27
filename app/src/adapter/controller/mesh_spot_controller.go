@@ -2,8 +2,7 @@ package controller
 
 import (
 	"net/http"
-	"strings"
-	"src/usecase"
+	"app/usecase"
 	"github.com/labstack/echo/v4"
 )
 
@@ -30,8 +29,6 @@ func (ctrl *MeshSpotController) Execute(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
 	}
-	authHeader := c.Request().Header.Get("Authorization")
-	token := strings.TrimPrefix(authHeader, "Bearer ")
 	input := usecase.RegisterSpotPostInput{
 		UserID:    0, // トークンからユーザーIDを抽出する処理は後続で追加
 		SpotName:  req.SpotName,

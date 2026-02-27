@@ -2,7 +2,8 @@ package usecase
 
 import (
 	"context"
-	"src/domain/entities"
+	"app/domain/entities"
+	"app/domain/value_objects"
 )
 
 type ListMySpotsInput struct {
@@ -41,12 +42,16 @@ func NewListMySpotsInteractor(p ListMySpotsPresenter, s entities.SpotRepository,
 }
 
 func (i *listMySpotsInteractor) Execute(ctx context.Context, input ListMySpotsInput) (*ListMySpotsOutput, error) {
-	spots, err := i.spotRepo.FindByID(input.UserID)
+	userID, err := value_objects.NewID(input.UserID)
+	if err != nil {
+		return nil, err
+	}
+	spot, err := i.spotRepo.FindByID(userID)
 	if err != nil {
 		return nil, err
 	}
 	var pairs []SpotPostPair
-	for _, spot := range spots {
+	if spot != nil {
 		posts, err := i.postRepo.FindBySpotID(spot.ID)
 		if err != nil {
 			return nil, err

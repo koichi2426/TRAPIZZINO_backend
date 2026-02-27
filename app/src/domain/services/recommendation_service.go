@@ -1,7 +1,7 @@
 package services
 
 import (
-	"src/domain/entities"
+	"app/domain/entities"
 )
 
 type RecommendationService interface {

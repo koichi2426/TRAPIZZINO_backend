@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"context"
-	"src/domain/services"
+	"app/domain/services"
 )
 
 type AuthLoginInput struct {

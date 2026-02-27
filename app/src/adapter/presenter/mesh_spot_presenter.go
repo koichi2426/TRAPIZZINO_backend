@@ -1,8 +1,8 @@
 package presenter
 
 import (
-	"src/domain/entities"
-	"src/usecase"
+	"app/domain/entities"
+	"app/usecase"
 )
 
 // MeshSpotPresenterは、スポットと投稿の登録・更新結果をAPI仕様のJSONレスポンス形式に整形する役割を担います。

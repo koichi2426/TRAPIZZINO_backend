@@ -1,8 +1,7 @@
 package presenter
 
 import (
-	"src/domain/entities"
-	"src/usecase"
+	"app/usecase"
 )
 
 // AuthPresenterは、認証ユースケースの出力DTOをAPI仕様のJSONレスポンス形式に整形する役割を担います。

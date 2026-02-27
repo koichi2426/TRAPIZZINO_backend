@@ -2,8 +2,7 @@ package controller
 
 import (
 	"net/http"
-	"strings"
-	"src/usecase"
+	"app/usecase"
 	"github.com/labstack/echo/v4"
 )
 
@@ -19,8 +18,6 @@ func NewUserSpotController(u usecase.ListMySpotsUseCase) *UserSpotController {
 
 // ExecuteはAuthorizationヘッダーを解析し、ユースケースを呼び出してレスポンスを返します。
 func (ctrl *UserSpotController) Execute(c echo.Context) error {
-	authHeader := c.Request().Header.Get("Authorization")
-	token := strings.TrimPrefix(authHeader, "Bearer ")
 	input := usecase.ListMySpotsInput{
 		UserID: 0, // トークンからユーザーIDを抽出する処理は後続で追加
 	}

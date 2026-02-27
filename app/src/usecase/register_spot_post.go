@@ -2,7 +2,10 @@ package usecase
 
 import (
 	"context"
-	"src/domain/entities"
+	"errors"
+	"time"
+	"app/domain/entities"
+	"app/domain/value_objects"
 )
 
 type RegisterSpotPostInput struct {
@@ -59,7 +62,15 @@ func (i *registerSpotPostInteractor) Execute(ctx context.Context, input Register
 	if err != nil {
 		return nil, err
 	}
-	post, err := entities.NewPost(0, input.UserID, input.SpotName, input.ImageURL, input.Caption, time.Now())
+	userID, err := entities.NewUser(input.UserID, "", "", "")
+	if err != nil {
+		return nil, err
+	}
+	imgURL, err := value_objects.NewImageURL(input.ImageURL)
+	if err != nil {
+		return nil, err
+	}
+	post, err := entities.NewPost(0, userID.ID.Value(), "", imgURL.String(), input.Caption, time.Now())
 	if err != nil {
 		return nil, err
 	}

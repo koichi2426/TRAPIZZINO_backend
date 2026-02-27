@@ -1,7 +1,7 @@
 package entities
 
 import (
-	"src/domain/value_objects"
+	"app/domain/value_objects"
 )
 
 type Spot struct {

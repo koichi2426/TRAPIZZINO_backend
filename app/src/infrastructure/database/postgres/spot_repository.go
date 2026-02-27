@@ -1,11 +1,9 @@
 package postgres
 
 import (
-	"context"
 	"database/sql"
-	"errors"
-	"src/domain/entities"
-	"src/domain/value_objects"
+	"app/domain/entities"
+	"app/domain/value_objects"
 )
 
 // SpotRepositoryはPostgreSQL+PostGISを用いたSpotRepositoryの実装です。

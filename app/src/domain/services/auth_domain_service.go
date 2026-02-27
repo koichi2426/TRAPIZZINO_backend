@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"src/domain/entities"
+	"app/domain/entities"
 )
 
 type AuthDomainService interface {

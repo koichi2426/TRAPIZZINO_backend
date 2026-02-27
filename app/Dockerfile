@@ -1,11 +1,11 @@
 # ---- Build Stage ----
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod .
 COPY go.sum .
+COPY src/ .
 RUN go mod download
-COPY src ./src
-RUN CGO_ENABLED=0 GOOS=linux go build -o app ./src/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o app .
 
 # ---- Run Stage ----
 FROM alpine:latest

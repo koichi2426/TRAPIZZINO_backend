@@ -2,8 +2,9 @@ package usecase
 
 import (
 	"context"
-	"src/domain/entities"
-	"src/domain/services"
+	"app/domain/entities"
+	"app/domain/services"
+	"app/domain/value_objects"
 )
 
 type DistillRecommendationInput struct {
@@ -38,11 +39,19 @@ func NewDistillRecommendationInteractor(p DistillRecommendationPresenter, r serv
 }
 
 func (i *distillRecommendationInteractor) Execute(ctx context.Context, input DistillRecommendationInput) (*DistillRecommendationOutput, error) {
-	spots, err := i.spotRepo.FindByID(input.UserID)
+	userID, err := value_objects.NewID(input.UserID)
 	if err != nil {
 		return nil, err
 	}
-	user := &entities.User{ID: value_objects.ID(input.UserID)}
+	spot, err := i.spotRepo.FindByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	user := &entities.User{ID: userID}
+	var spots []*entities.Spot
+	if spot != nil {
+		spots = append(spots, spot)
+	}
 	recommended, err := i.recommendation.RecommendSpot(user, spots)
 	if err != nil {
 		return nil, err

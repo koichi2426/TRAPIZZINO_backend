@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 	"fmt"
-	"src/infrastructure/database/postgres" // MySQLからPostgreSQLに読み替え
-	"src/infrastructure/router"
+	"app/infrastructure/database/postgres" // MySQLからPostgreSQLに読み替え
+	"app/infrastructure/router"
 
-	_ "github.com/lib/pq" // PostgreSQLドライバー
+	_ "github.com/lib/pq" // PostgreSQLドライバー（空importで有効化）
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )

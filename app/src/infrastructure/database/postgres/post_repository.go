@@ -1,10 +1,9 @@
 package postgres
 
 import (
-	"context"
 	"database/sql"
-	"src/domain/entities"
-	"src/domain/value_objects"
+	"app/domain/entities"
+	"app/domain/value_objects"
 )
 
 // PostRepositoryはPostgreSQLを用いたPostRepositoryの実装です。

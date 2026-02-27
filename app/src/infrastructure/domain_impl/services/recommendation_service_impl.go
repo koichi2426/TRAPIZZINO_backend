@@ -1,8 +1,8 @@
 package domain_impl_services
 
 import (
-	"src/domain/entities"
-	"src/domain/services"
+	"app/domain/entities"
+	"app/domain/services"
 )
 
 // RecommendationServiceImplはRecommendationServiceインターフェースの具象実装です。

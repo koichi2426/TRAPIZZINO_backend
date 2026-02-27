@@ -2,7 +2,7 @@ package entities
 
 import (
 	"time"
-	"src/domain/value_objects"
+	"app/domain/value_objects"
 )
 
 type Post struct {

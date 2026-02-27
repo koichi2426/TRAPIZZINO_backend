@@ -1,8 +1,8 @@
 package domain_impl_services
 
 import (
-	"src/domain/services"
-	"src/domain/value_objects"
+	"app/domain/services"
+	"app/domain/value_objects"
 )
 
 // MeshCalculationServiceImplはMeshCalculationServiceインターフェースの具象実装です。

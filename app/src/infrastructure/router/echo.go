@@ -2,11 +2,11 @@ package router
 
 import (
 	"database/sql"
-	"src/adapter/controller"
-	"src/adapter/presenter"
-	"src/infrastructure/database/postgres"
-	impl_services "src/infrastructure/domain_impl/services"
-	"src/usecase"
+	"app/adapter/controller"
+	"app/adapter/presenter"
+	"app/infrastructure/database/postgres"
+	impl_services "app/infrastructure/domain_impl/services"
+	"app/usecase"
 
 	"github.com/labstack/echo/v4"
 )
@@ -19,18 +19,18 @@ func InitRoutes(e *echo.Echo, db *sql.DB) {
 	userRepo := postgres.NewUserRepository(db)
 
 	authService := impl_services.NewAuthDomainServiceImpl()
-	meshService := impl_services.NewMeshCalculationServiceImpl()
 	recommendationService := impl_services.NewRecommendationServiceImpl()
 
 	// 2. プレゼンターの初期化
 	authPresenter := presenter.NewAuthPresenter()
+	userSignupPresenter := presenter.NewUserSignupPresenter()
 	userSpotPresenter := presenter.NewUserSpotPresenter()
 	meshSpotPresenter := presenter.NewMeshSpotPresenter()
 	recommendationPresenter := presenter.NewRecommendationPresenter()
 
 	// 3. ユースケースの初期化
 	authLoginUsecase := usecase.NewAuthLoginInteractor(authPresenter, authService)
-	userSignupUsecase := usecase.NewUserSignupInteractor(authPresenter, userRepo, authService)
+	userSignupUsecase := usecase.NewUserSignupInteractor(userSignupPresenter, userRepo, authService)
 	registerSpotUsecase := usecase.NewRegisterSpotPostInteractor(meshSpotPresenter, spotRepo, postRepo)
 	listMySpotsUsecase := usecase.NewListMySpotsInteractor(userSpotPresenter, spotRepo, postRepo)
 	distillRecommendationUsecase := usecase.NewDistillRecommendationInteractor(recommendationPresenter, recommendationService, spotRepo)

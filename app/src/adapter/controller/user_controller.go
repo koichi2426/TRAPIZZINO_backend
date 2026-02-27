@@ -2,7 +2,7 @@ package controller
 
 import (
 	"net/http"
-	"src/usecase"
+	"app/usecase"
 	"github.com/labstack/echo/v4"
 )
 
