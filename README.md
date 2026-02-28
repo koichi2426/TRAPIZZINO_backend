@@ -6,13 +6,12 @@
 
 * **Docker / Docker Compose**
 * **Atlas CLI**
+
 ```bash
 # Linux (VPS) の場合
 curl -sSf https://atlasgo.sh | sh
 
 ```
-
-
 
 ### 1. ソースコードの取得
 
@@ -37,14 +36,20 @@ git pull origin main
 
 ```bash
 cp app/.env.example app/.env
-# 必要に応じて編集
-nano app/.env
+# Vimで編集
+vi app/.env
 
 ```
 
 ### 3. コンテナのビルドと起動
 
+環境によってコマンドが異なるため、動く方を実行してください。
+
 ```bash
+# パターンA (最新のDocker)
+docker compose up -d --build
+
+# パターンB (旧バージョン)
 docker-compose up -d --build
 
 ```
@@ -81,5 +86,42 @@ curl http://127.0.0.1:8000/health
 ```bash
 # api.example.com はご自身のドメインに読み替えてください
 curl https://api.example.com/health
+
+```
+
+---
+
+## 🧹 Docker環境の完全リセット手順
+
+開発中に環境を完全に真っさらにしたい場合（コンテナ、イメージ、ボリューム、ネットワークの全削除）は、以下の手順を実行してください。
+
+### 1. 全リソースの削除
+
+実行中のコンテナを強制停止し、すべてのデータを抹消します。
+
+```bash
+# 全コンテナの強制停止・削除
+docker rm -f $(docker ps -aq)
+
+# イメージ・ボリューム・ネットワーク・キャッシュをすべて削除
+docker system prune -a --volumes -f
+
+# 残った名前付きボリュームの強制削除
+docker volume rm $(docker volume ls -q)
+
+```
+
+### 2. 削除後の確認
+
+以下のコマンドですべてが **0B** または空であることを確認してください。
+
+```bash
+# リソース使用状況のサマリー確認
+docker system df
+
+# 個別確認
+docker ps -a
+docker images
+docker volume ls
 
 ```
