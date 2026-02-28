@@ -43,7 +43,13 @@ vi app/.env
 
 ### 3. コンテナのビルドと起動
 
+環境によってコマンドが異なるため、動く方を実行してください。
+
 ```bash
+# パターンA (最新のDocker)
+docker compose up -d --build
+
+# パターンB (旧バージョン)
 docker-compose up -d --build
 
 ```
