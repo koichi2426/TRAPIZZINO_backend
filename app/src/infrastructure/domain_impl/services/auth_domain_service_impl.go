@@ -7,7 +7,7 @@ import (
 
 	"app/domain/entities"
 	"app/domain/services"
-	"app/domain/value_objects" // 追加：型変換に必要
+	"app/domain/value_objects"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -17,14 +17,12 @@ type AuthDomainServiceImpl struct {
 	secretKey []byte
 }
 
-// NewAuthDomainServiceImpl は環境変数から渡された秘密鍵で初期化します
 func NewAuthDomainServiceImpl(secret string) services.AuthDomainService {
 	return &AuthDomainServiceImpl{
 		secretKey: []byte(secret),
 	}
 }
 
-// HashPassword は bcrypt でパスワードをハッシュ化します
 func (s *AuthDomainServiceImpl) HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -33,20 +31,20 @@ func (s *AuthDomainServiceImpl) HashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// VerifyPassword はハッシュと生のパスワードを比較します
-func (s *AuthDomainServiceImpl) VerifyPassword(hashedPassword, rawPassword string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(rawPassword))
+// 修正: 引数をインターフェース定義（VO）に合わせ、内部で String() を呼ぶ
+func (s *AuthDomainServiceImpl) VerifyPassword(hashedPassword value_objects.HashedPassword, rawPassword string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword.String()), []byte(rawPassword))
 }
 
-// IssueToken は JWT を発行します
 func (s *AuthDomainServiceImpl) IssueToken(ctx context.Context, user *entities.User) (string, error) {
 	if user == nil {
 		return "", errors.New("user is nil")
 	}
 
+	// 修正: VO から生の値を取り出すメソッド (.Value() や .String()) を使用
 	claims := jwt.MapClaims{
-		"user_id":  int(user.ID),           // 独自型を int にキャストして保存
-		"username": string(user.Username), // 独自型を string にキャストして保存
+		"user_id":  user.ID.Value(),       
+		"username": user.Username.String(), 
 		"exp":      time.Now().Add(time.Hour * 24).Unix(),
 	}
 
@@ -54,7 +52,6 @@ func (s *AuthDomainServiceImpl) IssueToken(ctx context.Context, user *entities.U
 	return token.SignedString(s.secretKey)
 }
 
-// VerifyToken は JWT を検証し、ドメインモデル(User)を復元します
 func (s *AuthDomainServiceImpl) VerifyToken(ctx context.Context, tokenString string) (*entities.User, error) {
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -68,17 +65,20 @@ func (s *AuthDomainServiceImpl) VerifyToken(ctx context.Context, tokenString str
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		userID, okID := claims["user_id"].(float64)
-		username, okName := claims["username"].(string)
+		userIDFloat, okID := claims["user_id"].(float64) // JWT の数値は float64 でパースされる
+		usernameStr, okName := claims["username"].(string)
 
 		if !okID || !okName {
 			return nil, errors.New("failed to parse token claims")
 		}
 
-		// 重要：基本型からドメインの独自型（Value Object）にキャストして戻す
+		// 修正: NewID 等のファクトリメソッドを使用して VO を再生成する
+		uID, _ := value_objects.NewID(int(userIDFloat))
+		uName, _ := value_objects.NewUsername(usernameStr)
+
 		return &entities.User{
-			ID:       value_objects.ID(int(userID)),
-			Username: value_objects.Username(username),
+			ID:       uID,
+			Username: uName,
 		}, nil
 	}
 
