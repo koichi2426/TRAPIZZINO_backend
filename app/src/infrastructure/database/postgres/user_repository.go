@@ -7,11 +7,12 @@ import (
 	"app/domain/value_objects"
 )
 
-// UserRepositoryはPostgreSQLを用いたUserRepositoryの実装です。
 type UserRepository struct {
 	db *sql.DB
 }
 
+// 戻り値をインターフェース型に合わせるのが一般的ですが、
+// router.go の記述に合わせて一旦このままにします。
 func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
@@ -19,7 +20,13 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 func (r *UserRepository) Create(user *entities.User) (*entities.User, error) {
 	query := `INSERT INTO users (username, email, hashed_password) VALUES ($1, $2, $3) RETURNING id`
 	var id int
-	err := r.db.QueryRow(query, user.Username, user.Email.String(), user.HashedPassword).Scan(&id)
+	// 修正: Username と HashedPassword も .String() で生の文字列を渡す
+	err := r.db.QueryRow(query, 
+		user.Username.String(), 
+		user.Email.String(), 
+		user.HashedPassword.String(),
+	).Scan(&id)
+	
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +56,7 @@ func (r *UserRepository) FindByID(id value_objects.ID) (*entities.User, error) {
 
 func (r *UserRepository) FindByEmail(email value_objects.Email) (*entities.User, error) {
 	query := `SELECT id, username, email, hashed_password FROM users WHERE email = $1`
+	// email.String() は OK
 	row := r.db.QueryRow(query, email.String())
 	var uid int
 	var username, emailStr, hashedPassword string
@@ -92,7 +100,13 @@ func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*
 
 func (r *UserRepository) Update(user *entities.User) error {
 	query := `UPDATE users SET username = $1, email = $2, hashed_password = $3 WHERE id = $4`
-	_, err := r.db.Exec(query, user.Username, user.Email.String(), user.HashedPassword, user.ID.Value())
+	// 修正: 全て String() / Value() を介して渡す
+	_, err := r.db.Exec(query, 
+		user.Username.String(), 
+		user.Email.String(), 
+		user.HashedPassword.String(), 
+		user.ID.Value(),
+	)
 	return err
 }
 
