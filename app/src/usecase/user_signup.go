@@ -40,17 +40,29 @@ func NewUserSignupInteractor(p UserSignupPresenter, r entities.UserRepository, s
 }
 
 func (i *userSignupInteractor) Execute(ctx context.Context, input UserSignupInput) (*UserSignupOutput, error) {
-	user, err := entities.NewUser(0, input.Username, input.Email, input.Password)
+	// 1. パスワードをハッシュ化（bcrypt変換）する
+	hashedPassword, err := i.userService.HashPassword(input.Password)
 	if err != nil {
 		return nil, err
 	}
+
+	// 2. ハッシュ化されたパスワードを使ってユーザーエンティティを作成する
+	user, err := entities.NewUser(0, input.Username, input.Email, hashedPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. データベースに保存する（Repository を経由）
 	created, err := i.userRepo.Create(user)
 	if err != nil {
 		return nil, err
 	}
+
+	// 4. JWT トークンを発行する
 	token, err := i.userService.IssueToken(ctx, created)
 	if err != nil {
 		return nil, err
 	}
+
 	return i.presenter.Output(created, token), nil
 }

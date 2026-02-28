@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"app/domain/entities"
 	"app/domain/value_objects"
@@ -58,6 +59,29 @@ func (r *UserRepository) FindByEmail(email value_objects.Email) (*entities.User,
 	emailVO, _ := value_objects.NewEmail(emailStr)
 	uname, _ := value_objects.NewUsername(username)
 	hashVO, _ := value_objects.NewHashedPassword(hashedPassword)
+	return &entities.User{
+		ID:             userID,
+		Username:       uname,
+		Email:          emailVO,
+		HashedPassword: hashVO,
+	}, nil
+}
+
+func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*entities.User, error) {
+	query := `SELECT id, username, email, hashed_password FROM users WHERE username = $1`
+	row := r.db.QueryRowContext(ctx, query, username)
+	
+	var uid int
+	var unameStr, emailStr, hashedPassword string
+	if err := row.Scan(&uid, &unameStr, &emailStr, &hashedPassword); err != nil {
+		return nil, err
+	}
+
+	userID, _ := value_objects.NewID(uid)
+	emailVO, _ := value_objects.NewEmail(emailStr)
+	uname, _ := value_objects.NewUsername(unameStr)
+	hashVO, _ := value_objects.NewHashedPassword(hashedPassword)
+	
 	return &entities.User{
 		ID:             userID,
 		Username:       uname,

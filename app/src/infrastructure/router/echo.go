@@ -2,6 +2,8 @@ package router
 
 import (
 	"database/sql"
+	"os"
+
 	"app/adapter/controller"
 	"app/adapter/presenter"
 	"app/infrastructure/database/postgres"
@@ -18,7 +20,15 @@ func InitRoutes(e *echo.Echo, db *sql.DB) {
 	postRepo := postgres.NewPostRepository(db)
 	userRepo := postgres.NewUserRepository(db)
 
-	authService := impl_services.NewAuthDomainServiceImpl()
+	// 環境変数から JWT の秘密鍵を取得
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		// 未設定の場合は、開発用デフォルト値
+		jwtSecret = "develop_secret_key_change_me"
+	}
+
+	// 引数に jwtSecret を渡して初期化
+	authService := impl_services.NewAuthDomainServiceImpl(jwtSecret)
 	recommendationService := impl_services.NewRecommendationServiceImpl()
 
 	// 2. プレゼンターの初期化
@@ -29,7 +39,7 @@ func InitRoutes(e *echo.Echo, db *sql.DB) {
 	recommendationPresenter := presenter.NewRecommendationPresenter()
 
 	// 3. ユースケースの初期化
-	authLoginUsecase := usecase.NewAuthLoginInteractor(authPresenter, authService)
+	authLoginUsecase := usecase.NewAuthLoginInteractor(authPresenter, userRepo, authService)
 	userSignupUsecase := usecase.NewUserSignupInteractor(userSignupPresenter, userRepo, authService)
 	registerSpotUsecase := usecase.NewRegisterSpotPostInteractor(meshSpotPresenter, spotRepo, postRepo)
 	listMySpotsUsecase := usecase.NewListMySpotsInteractor(userSpotPresenter, spotRepo, postRepo)
