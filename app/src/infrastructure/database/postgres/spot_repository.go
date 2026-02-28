@@ -18,9 +18,7 @@ func NewSpotRepository(db *sql.DB) entities.SpotRepository {
     return &spotRepository{db: db}
 }
 
-// 座標による同一店舗検索（店名不問、同一地点判定）
 func (r *spotRepository) FindByLocation(ctx context.Context, lat, lng float64) (*entities.Spot, error) {
-    // 誤差1m以内を同一地点とみなす判定
     query := `
         SELECT id, name, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id 
         FROM spots 
@@ -99,12 +97,19 @@ func (r *spotRepository) FindByMeshID(meshID value_objects.MeshID) ([]*entities.
 }
 
 func (r *spotRepository) FindResonantUsersWithMatchCount(ctx context.Context, userID value_objects.ID) ([]entities.ResonantUser, error) {
+    // 修正：自分が投稿した店舗と同じメッシュにある店舗に投稿している他者をカウント
     query := `
-        SELECT registered_user_id, COUNT(*) as match_count 
-        FROM spots 
-        WHERE mesh_id IN (SELECT mesh_id FROM spots WHERE registered_user_id = $1)
-        AND registered_user_id != $1
-        GROUP BY registered_user_id`
+        SELECT p.user_id, COUNT(DISTINCT s.mesh_id) as match_count 
+        FROM posts p
+        JOIN spots s ON p.spot_id = s.id
+        WHERE s.mesh_id IN (
+            SELECT s2.mesh_id 
+            FROM posts p2 
+            JOIN spots s2 ON p2.spot_id = s2.id 
+            WHERE p2.user_id = $1
+        )
+        AND p.user_id != $1
+        GROUP BY p.user_id`
     
     rows, err := r.db.QueryContext(ctx, query, userID.Value())
     if err != nil {
