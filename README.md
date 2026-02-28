@@ -6,13 +6,12 @@
 
 * **Docker / Docker Compose**
 * **Atlas CLI**
+
 ```bash
 # Linux (VPS) の場合
 curl -sSf https://atlasgo.sh | sh
 
 ```
-
-
 
 ### 1. ソースコードの取得
 
@@ -37,8 +36,8 @@ git pull origin main
 
 ```bash
 cp app/.env.example app/.env
-# 必要に応じて編集
-nano app/.env
+# Vimで編集
+vi app/.env
 
 ```
 
