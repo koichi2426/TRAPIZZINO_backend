@@ -88,3 +88,40 @@ curl http://127.0.0.1:8000/health
 curl https://api.example.com/health
 
 ```
+
+---
+
+## 🧹 Docker環境の完全リセット手順
+
+開発中に環境を完全に真っさらにしたい場合（コンテナ、イメージ、ボリューム、ネットワークの全削除）は、以下の手順を実行してください。
+
+### 1. 全リソースの削除
+
+実行中のコンテナを強制停止し、すべてのデータを抹消します。
+
+```bash
+# 全コンテナの強制停止・削除
+docker rm -f $(docker ps -aq)
+
+# イメージ・ボリューム・ネットワーク・キャッシュをすべて削除
+docker system prune -a --volumes -f
+
+# 残った名前付きボリュームの強制削除
+docker volume rm $(docker volume ls -q)
+
+```
+
+### 2. 削除後の確認
+
+以下のコマンドですべてが **0B** または空であることを確認してください。
+
+```bash
+# リソース使用状況のサマリー確認
+docker system df
+
+# 個別確認
+docker ps -a
+docker images
+docker volume ls
+
+```
