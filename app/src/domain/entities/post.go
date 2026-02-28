@@ -6,15 +6,17 @@ import (
 )
 
 type Post struct {
-	ID        value_objects.ID
-	UserID    value_objects.ID
-	Username  value_objects.Username
-	ImageURL  value_objects.ImageURL
-	Caption   value_objects.Caption
-	PostedAt  time.Time
+	ID       value_objects.ID
+	UserID   value_objects.ID
+	SpotID   value_objects.ID // 追加：どのスポットに対する投稿かを識別するために必須
+	UserName value_objects.Username
+	ImageURL value_objects.ImageURL
+	Caption  value_objects.Caption
+	PostedAt time.Time
 }
 
-func NewPost(id, userID int, username, imageURL, caption string, postedAt time.Time) (*Post, error) {
+// NewPost の引数に spotID (int) を追加し、内部で VO に変換します
+func NewPost(id, userID, spotID int, username, imageURL, caption string, postedAt time.Time) (*Post, error) {
 	pid, err := value_objects.NewID(id)
 	if err != nil {
 		return nil, err
@@ -23,6 +25,12 @@ func NewPost(id, userID int, username, imageURL, caption string, postedAt time.T
 	if err != nil {
 		return nil, err
 	}
+	// SpotID を VO に変換
+	sid, err := value_objects.NewID(spotID)
+	if err != nil {
+		return nil, err
+	}
+	
 	uname, err := value_objects.NewUsername(username)
 	if err != nil {
 		return nil, err
@@ -35,10 +43,12 @@ func NewPost(id, userID int, username, imageURL, caption string, postedAt time.T
 	if err != nil {
 		return nil, err
 	}
+
 	return &Post{
 		ID:       pid,
 		UserID:   uid,
-		Username: uname,
+		SpotID:   sid, // セット
+		UserName: uname,
 		ImageURL: imgURL,
 		Caption:  capVO,
 		PostedAt: postedAt,

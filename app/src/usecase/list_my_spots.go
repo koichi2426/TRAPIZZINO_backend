@@ -33,7 +33,11 @@ type listMySpotsInteractor struct {
 	postRepo  entities.PostRepository
 }
 
-func NewListMySpotsInteractor(p ListMySpotsPresenter, s entities.SpotRepository, r entities.PostRepository) ListMySpotsUseCase {
+func NewListMySpotsInteractor(
+	p ListMySpotsPresenter, 
+	s entities.SpotRepository, 
+	r entities.PostRepository,
+) ListMySpotsUseCase {
 	return &listMySpotsInteractor{
 		presenter: p,
 		spotRepo:  s,
@@ -46,10 +50,13 @@ func (i *listMySpotsInteractor) Execute(ctx context.Context, input ListMySpotsIn
 	if err != nil {
 		return nil, err
 	}
-	spot, err := i.spotRepo.FindByID(userID)
+
+	// 修正ポイント：インターフェースの変更に合わせて第一引数に ctx を追加
+	spot, err := i.spotRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
+
 	var pairs []SpotPostPair
 	if spot != nil {
 		posts, err := i.postRepo.FindBySpotID(spot.ID)

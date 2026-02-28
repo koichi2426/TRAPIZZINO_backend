@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"context" // context を追加
 	"app/domain/value_objects"
 )
 
@@ -40,6 +41,7 @@ type UserRepository interface {
 	Create(user *User) (*User, error)
 	FindByID(id value_objects.ID) (*User, error)
 	FindByEmail(email value_objects.Email) (*User, error)
+	FindByUsername(ctx context.Context, username string) (*User, error) 
 	Update(user *User) error
 	Delete(id value_objects.ID) error
 }

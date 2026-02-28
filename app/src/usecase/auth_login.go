@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+	"errors"
+	"app/domain/entities"
 	"app/domain/services"
 )
 
@@ -24,24 +26,42 @@ type AuthLoginUseCase interface {
 
 type authLoginInteractor struct {
 	presenter   AuthLoginPresenter
+	userRepo    entities.UserRepository 
 	userService services.AuthDomainService
 }
 
-func NewAuthLoginInteractor(p AuthLoginPresenter, s services.AuthDomainService) AuthLoginUseCase {
+func NewAuthLoginInteractor(
+	p AuthLoginPresenter, 
+	r entities.UserRepository, 
+	s services.AuthDomainService,
+) AuthLoginUseCase {
 	return &authLoginInteractor{
 		presenter:   p,
+		userRepo:    r,
 		userService: s,
 	}
 }
 
 func (i *authLoginInteractor) Execute(ctx context.Context, input AuthLoginInput) (*AuthLoginOutput, error) {
-	user, err := i.userService.VerifyToken(ctx, input.Username+":"+input.Password)
+	// 1. DBからユーザーを取得する
+	user, err := i.userRepo.FindByUsername(ctx, input.Username)
 	if err != nil {
-		return nil, err
+		// セキュリティのため、ユーザーの存在有無を特定させないメッセージを返す
+		return nil, errors.New("invalid username or password")
 	}
+
+	// 2. パスワードを照合する
+	// 【修正】インターフェースの変更（VOを受け取る形式）に合わせてキャストを削除
+	err = i.userService.VerifyPassword(user.HashedPassword, input.Password)
+	if err != nil {
+		return nil, errors.New("invalid username or password")
+	}
+
+	// 3. 照合成功！JWT トークンを発行する
 	token, err := i.userService.IssueToken(ctx, user)
 	if err != nil {
 		return nil, err
 	}
+
 	return i.presenter.Output(token), nil
 }
