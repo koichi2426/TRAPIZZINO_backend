@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
-	"app/domain/entities"
-	"app/domain/value_objects" // 追加：型定義のため
+	"app/src/domain/entities"
+	"app/src/domain/value_objects" // 追加：型定義のため
 )
 
 type AuthDomainService interface {

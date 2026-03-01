@@ -1,8 +1,8 @@
 package presenter
 
 import (
-	"app/domain/entities"
-	"app/usecase"
+	"app/src/domain/entities"
+	"app/src/usecase"
 )
 
 type userSignupPresenter struct{}

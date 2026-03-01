@@ -2,7 +2,7 @@ package entities
 
 import (
 	"context" // context を追加
-	"app/domain/value_objects"
+	"app/src/domain/value_objects"
 )
 
 type User struct {

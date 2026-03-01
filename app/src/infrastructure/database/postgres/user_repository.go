@@ -3,8 +3,8 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"app/domain/entities"
-	"app/domain/value_objects"
+	"app/src/domain/entities"
+	"app/src/domain/value_objects"
 )
 
 type UserRepository struct {

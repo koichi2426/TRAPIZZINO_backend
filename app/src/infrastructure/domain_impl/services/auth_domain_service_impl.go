@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"app/domain/entities"
-	"app/domain/services"
-	"app/domain/value_objects"
+	"app/src/domain/entities"
+	"app/src/domain/services"
+	"app/src/domain/value_objects"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"

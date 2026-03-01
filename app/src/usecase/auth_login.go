@@ -3,8 +3,8 @@ package usecase
 import (
 	"context"
 	"errors"
-	"app/domain/entities"
-	"app/domain/services"
+	"app/src/domain/entities"
+	"app/src/domain/services"
 )
 
 type AuthLoginInput struct {

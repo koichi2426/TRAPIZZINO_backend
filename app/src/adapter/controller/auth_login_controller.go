@@ -2,22 +2,22 @@ package controller
 
 import (
 	"net/http"
-	"app/usecase"
+	"app/src/usecase"
 	"github.com/labstack/echo/v4"
 )
 
-// AuthControllerは、POST /v1/auth/login のリクエストを受け取り、
+// AuthLoginControllerは、POST /v1/auth/login のリクエストを受け取り、
 // email, password をユースケース層のDTOに変換して認証処理を行う役割を担います。
-type AuthController struct {
+type AuthLoginController struct {
 	usecase usecase.AuthLoginUseCase
 }
 
-func NewAuthController(u usecase.AuthLoginUseCase) *AuthController {
-	return &AuthController{usecase: u}
+func NewAuthLoginController(u usecase.AuthLoginUseCase) *AuthLoginController {
+	return &AuthLoginController{usecase: u}
 }
 
 // Executeはリクエストボディをバインドし、ユースケースを呼び出してレスポンスを返します。
-func (ctrl *AuthController) Execute(c echo.Context) error {
+func (ctrl *AuthLoginController) Execute(c echo.Context) error {
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`

@@ -2,20 +2,20 @@ package presenter
 
 import (
 	"time"
-	"app/domain/entities"
-	"app/domain/value_objects"
-	"app/usecase"
+	"app/src/domain/entities"
+	"app/src/domain/value_objects"
+	"app/src/usecase"
 )
 
-type recommendationPresenter struct{}
+type distillRecommendationPresenter struct{}
 
-func NewRecommendationPresenter() usecase.DistillRecommendationPresenter {
-	return &recommendationPresenter{}
+func NewDistillRecommendationPresenter() usecase.DistillRecommendationPresenter {
+	return &distillRecommendationPresenter{}
 }
 
 // Output はユースケースから渡されたバラバラのドメインオブジェクトを、
 // API仕様書通りの JSON 構造（DTO）へ構造化します。
-func (p *recommendationPresenter) Output(
+func (p *distillRecommendationPresenter) Output(
 	spot *entities.Spot,
 	totalScore value_objects.TotalScore,
 	resonanceCount value_objects.ResonanceCount,

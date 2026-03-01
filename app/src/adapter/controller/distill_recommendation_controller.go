@@ -5,19 +5,19 @@ import (
 	"strconv"
 	"strings"
 
-	"app/usecase"
+	"app/src/usecase"
 	"github.com/labstack/echo/v4"
 )
 
-type RecommendationController struct {
+type DistillRecommendationController struct {
 	usecase usecase.DistillRecommendationUseCase
 }
 
-func NewRecommendationController(u usecase.DistillRecommendationUseCase) *RecommendationController {
-	return &RecommendationController{usecase: u}
+func NewDistillRecommendationController(u usecase.DistillRecommendationUseCase) *DistillRecommendationController {
+	return &DistillRecommendationController{usecase: u}
 }
 
-func (ctrl *RecommendationController) Execute(c echo.Context) error {
+func (ctrl *DistillRecommendationController) Execute(c echo.Context) error {
 	// 1. Authorization ヘッダーから生のトークン文字列を取得
 	// Bearer <token> の形式で送られてくることを想定します
 	authHeader := c.Request().Header.Get("Authorization")

@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"os"
 
-	"app/adapter/controller"
-	"app/adapter/presenter"
-	"app/infrastructure/database/postgres"
-	impl_services "app/infrastructure/domain_impl/services"
-	"app/usecase"
+	"app/src/adapter/controller"
+	"app/src/adapter/presenter"
+	"app/src/infrastructure/database/postgres"
+	impl_services "app/src/infrastructure/domain_impl/services"
+	"app/src/usecase"
 
 	"github.com/labstack/echo/v4"
 )
@@ -28,44 +28,48 @@ func InitRoutes(e *echo.Echo, db *sql.DB) {
 	recommendationService := impl_services.NewRecommendationServiceImpl(spotRepo)
 
 	// 2. プレゼンターの初期化
-	authPresenter := presenter.NewAuthPresenter()
+	authLoginPresenter := presenter.NewAuthLoginPresenter()
 	userSignupPresenter := presenter.NewUserSignupPresenter()
-	userSpotPresenter := presenter.NewUserSpotPresenter()
-	meshSpotPresenter := presenter.NewMeshSpotPresenter()
-	recommendationPresenter := presenter.NewRecommendationPresenter()
+	listMySpotsPresenter := presenter.NewListMySpotsPresenter()
+	registerSpotPostPresenter := presenter.NewRegisterSpotPostPresenter()
+	distillRecommendationPresenter := presenter.NewDistillRecommendationPresenter()
 
 	// 3. ユースケースの初期化
-	authLoginUsecase := usecase.NewAuthLoginInteractor(authPresenter, userRepo, authService)
+	authLoginUsecase := usecase.NewAuthLoginInteractor(authLoginPresenter, userRepo, authService)
 	userSignupUsecase := usecase.NewUserSignupInteractor(userSignupPresenter, userRepo, authService)
-	registerSpotUsecase := usecase.NewRegisterSpotPostInteractor(meshSpotPresenter, spotRepo, postRepo)
-	listMySpotsUsecase := usecase.NewListMySpotsInteractor(userSpotPresenter, spotRepo, postRepo)
+	
+	// 【修正】第4引数に authService を追加
+	registerSpotUsecase := usecase.NewRegisterSpotPostInteractor(registerSpotPostPresenter, spotRepo, postRepo, authService)
+	
+	// 【修正】authService を追加し、トークンからユーザーを特定できるようにします
+	listMySpotsUsecase := usecase.NewListMySpotsInteractor(listMySpotsPresenter, spotRepo, postRepo, authService)
 	
 	distillRecommendationUsecase := usecase.NewDistillRecommendationInteractor(
-		recommendationPresenter, 
+		distillRecommendationPresenter, 
 		recommendationService, 
 		authService,
 	)
 
 	// 4. コントローラーの初期化
-	authController := controller.NewAuthController(authLoginUsecase)
-	userController := controller.NewUserController(userSignupUsecase)
+	authLoginController := controller.NewAuthLoginController(authLoginUsecase)
+	userSignupController := controller.NewUserSignupController(userSignupUsecase)
 	
-	// 【修正】第2引数に authService を追加して、トークン検証を可能にします
-	meshSpotController := controller.NewMeshSpotController(registerSpotUsecase, authService)
+	// 【修正】コントローラーはユースケースにトークンを渡すだけにするので、authService の注入は不要に
+	registerSpotPostController := controller.NewRegisterSpotPostController(registerSpotUsecase)
 	
-	userSpotController := controller.NewUserSpotController(listMySpotsUsecase)
-	recommendationController := controller.NewRecommendationController(distillRecommendationUsecase)
+	listMySpotsController := controller.NewListMySpotsController(listMySpotsUsecase)
+	distillRecommendationController := controller.NewDistillRecommendationController(distillRecommendationUsecase)
 
 	// 5. ルーティング定義
 	v1 := e.Group("/v1")
 
-	v1.POST("/auth/login", authController.Execute)
-	v1.POST("/users/signup", userController.Execute)
+	v1.POST("/auth/login", authLoginController.Execute)
+	v1.POST("/users/signup", userSignupController.Execute)
 
 	// PUT メソッドで定義された「情報の蒸留」エンドポイント
-	v1.PUT("/mesh/spots", meshSpotController.Execute)
-	v1.GET("/users/me/spots", userSpotController.Execute)
-	v1.GET("/recommendation/distill", recommendationController.Execute)
+	v1.PUT("/mesh/spots", registerSpotPostController.Execute)
+	v1.GET("/users/me/spots", listMySpotsController.Execute)
+	v1.GET("/recommendation/distill", distillRecommendationController.Execute)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
