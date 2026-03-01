@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"os"
 
-	"app/adapter/controller"
-	"app/adapter/presenter"
-	"app/infrastructure/database/postgres"
-	impl_services "app/infrastructure/domain_impl/services"
-	"app/usecase"
+	"app/src/adapter/controller"
+	"app/src/adapter/presenter"
+	"app/src/infrastructure/database/postgres"
+	impl_services "app/src/infrastructure/domain_impl/services"
+	"app/src/usecase"
 
 	"github.com/labstack/echo/v4"
 )

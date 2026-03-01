@@ -1,8 +1,8 @@
 package postgres
 
 import (
-	"app/domain/entities"
-	"app/domain/value_objects"
+	"app/src/domain/entities"
+	"app/src/domain/value_objects"
 	"context"
 	"database/sql"
 	"time"

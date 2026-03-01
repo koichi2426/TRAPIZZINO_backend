@@ -2,8 +2,8 @@ package usecase
 
 import (
 	"context"
-	"app/domain/entities"
-	"app/domain/services"
+	"app/src/domain/entities"
+	"app/src/domain/services"
 )
 
 type UserSignupInput struct {

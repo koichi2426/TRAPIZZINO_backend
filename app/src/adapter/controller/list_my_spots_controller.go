@@ -3,7 +3,7 @@ package controller
 import (
 	"net/http"
 	"strings"
-	"app/usecase"
+	"app/src/usecase"
 	"github.com/labstack/echo/v4"
 )
 

@@ -1,7 +1,7 @@
 package presenter
 
 import (
-	"app/usecase"
+	"app/src/usecase"
 )
 
 // AuthLoginPresenterは、認証ユースケースの出力DTOをAPI仕様のJSONレスポンス形式に整形する役割を担います。

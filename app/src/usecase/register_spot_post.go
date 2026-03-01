@@ -3,8 +3,8 @@ package usecase
 import (
 	"context"
 	"time"
-	"app/domain/entities"
-	"app/domain/services" // auth_domain_service.go を利用するために追加
+	"app/src/domain/entities"
+	"app/src/domain/services" // auth_domain_service.go を利用するために追加
 )
 
 type RegisterSpotPostInput struct {

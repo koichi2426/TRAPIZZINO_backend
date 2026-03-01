@@ -1,8 +1,8 @@
 package presenter
 
 import (
-	"app/domain/entities"
-	"app/usecase"
+	"app/src/domain/entities"
+	"app/src/usecase"
 )
 
 // RegisterSpotPostPresenterは、スポットと投稿の登録・更新結果をAPI仕様のJSONレスポンス形式に整形する役割を担います。

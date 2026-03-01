@@ -1,7 +1,7 @@
 package presenter
 
 import (
-	"app/usecase"
+	"app/src/usecase"
 )
 
 // ListMySpotsPresenterは、ユーザーが持つ複数のスポットをuser_spots配列としてラップし、API仕様のJSONレスポンス形式に整形する役割を担います。

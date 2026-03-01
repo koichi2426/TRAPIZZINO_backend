@@ -2,9 +2,9 @@ package presenter
 
 import (
 	"time"
-	"app/domain/entities"
-	"app/domain/value_objects"
-	"app/usecase"
+	"app/src/domain/entities"
+	"app/src/domain/value_objects"
+	"app/src/usecase"
 )
 
 type distillRecommendationPresenter struct{}

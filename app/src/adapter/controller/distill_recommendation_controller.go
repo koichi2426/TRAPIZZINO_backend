@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"app/usecase"
+	"app/src/usecase"
 	"github.com/labstack/echo/v4"
 )
 

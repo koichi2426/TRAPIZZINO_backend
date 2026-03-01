@@ -2,9 +2,9 @@ package usecase
 
 import (
 	"context"
-	"app/domain/entities"
-	"app/domain/services"
-	"app/domain/value_objects"
+	"app/src/domain/entities"
+	"app/src/domain/services"
+	"app/src/domain/value_objects"
 )
 
 type ListMySpotsInput struct {

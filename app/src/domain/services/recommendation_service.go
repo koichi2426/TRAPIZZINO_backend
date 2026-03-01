@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
-	"app/domain/entities"
-	"app/domain/value_objects"
+	"app/src/domain/entities"
+	"app/src/domain/value_objects"
 )
 
 type RecommendationService interface {
