@@ -7,17 +7,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type MeshSpotController struct {
+type RegisterSpotPostController struct {
 	usecase usecase.RegisterSpotPostUseCase
 }
 
-func NewMeshSpotController(u usecase.RegisterSpotPostUseCase) *MeshSpotController {
-	return &MeshSpotController{
+func NewRegisterSpotPostController(u usecase.RegisterSpotPostUseCase) *RegisterSpotPostController {
+	return &RegisterSpotPostController{
 		usecase: u,
 	}
 }
 
-func (ctrl *MeshSpotController) Execute(c echo.Context) error {
+func (ctrl *RegisterSpotPostController) Execute(c echo.Context) error {
 	// 1. Authorization ヘッダーから Bearer トークンを取得
 	authHeader := c.Request().Header.Get("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {

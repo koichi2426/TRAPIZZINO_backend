@@ -6,18 +6,18 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// UserControllerは、POST /v1/users/signup のリクエストを受け取り、
+// UserSignupControllerは、POST /v1/users/signup のリクエストを受け取り、
 // username, email, password をユースケース層のDTOに変換して新規ユーザー登録処理を行う役割を担います。
-type UserController struct {
+type UserSignupController struct {
 	usecase usecase.UserSignupUseCase
 }
 
-func NewUserController(u usecase.UserSignupUseCase) *UserController {
-	return &UserController{usecase: u}
+func NewUserSignupController(u usecase.UserSignupUseCase) *UserSignupController {
+	return &UserSignupController{usecase: u}
 }
 
 // Executeはリクエストボディをバインドし、ユースケースを呼び出してレスポンスを返します。
-func (ctrl *UserController) Execute(c echo.Context) error {
+func (ctrl *UserSignupController) Execute(c echo.Context) error {
 	var req struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`

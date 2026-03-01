@@ -7,18 +7,18 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// UserSpotControllerは、GET /v1/users/me/spots のリクエストを受け取り、
+// ListMySpotsControllerは、GET /v1/users/me/spots のリクエストを受け取り、
 // AuthorizationヘッダーからBearerトークンを抽出し、ユースケース層のDTOに変換します。
-type UserSpotController struct {
+type ListMySpotsController struct {
 	usecase usecase.ListMySpotsUseCase
 }
 
-func NewUserSpotController(u usecase.ListMySpotsUseCase) *UserSpotController {
-	return &UserSpotController{usecase: u}
+func NewListMySpotsController(u usecase.ListMySpotsUseCase) *ListMySpotsController {
+	return &ListMySpotsController{usecase: u}
 }
 
 // ExecuteはAuthorizationヘッダーを解析し、ユースケースを呼び出してレスポンスを返します。
-func (ctrl *UserSpotController) Execute(c echo.Context) error {
+func (ctrl *ListMySpotsController) Execute(c echo.Context) error {
 	// 1. Authorizationヘッダーからトークンを抽出
 	authHeader := c.Request().Header.Get("Authorization")
 	if authHeader == "" {
