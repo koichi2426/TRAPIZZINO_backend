@@ -9,6 +9,7 @@ import (
 	"app/src/domain/entities"
 	"app/src/domain/value_objects"
 	"app/src/usecase"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -64,11 +65,17 @@ func (p *MockPresenter) Output(s *entities.Spot, post *entities.Post) *usecase.R
 // --- TEST 本体 ---
 
 func TestRegisterSpotPost_Execute(t *testing.T) {
-	// 共通データ
+	// --- 共通データの増量 ---
 	malloy, _ := entities.NewUser(2, "local_malloy", "malloy@example.com", "hashed_password")
+	hacker, _ := entities.NewUser(3, "local_hacker", "hacker@example.com", "hashed_password") // 新規ユーザー追加
+
 	existingSpot, _ := entities.NewSpot(1, "恵比寿うどん", 35.6467, 139.7101, 1)
 	newlyCreatedSpot, _ := entities.NewSpot(99, "新規店", 35.0, 135.0, 2)
+	edgeSpot, _ := entities.NewSpot(88, "極地の店", 90.0, 180.0, 3) // 境界値用のスポット
+
 	dummyPost, _ := entities.NewPost(100, 2, 1, "local_malloy", "http://example.com/post.jpg", "caption", time.Now())
+	hackerPost, _ := entities.NewPost(101, 3, 88, "local_hacker", "http://example.com/edge.jpg", "極地到達", time.Now())
+	emptyCaptionPost, _ := entities.NewPost(102, 2, 1, "local_malloy", "http://example.com/empty.jpg", "", time.Now())
 
 	tests := []struct {
 		name      string
@@ -86,7 +93,7 @@ func TestRegisterSpotPost_Execute(t *testing.T) {
 				am.On("VerifyToken", mock.Anything, "valid_token").Return(malloy, nil)
 				sm.On("FindByLocation", mock.Anything, 35.6467, 139.7101).Return(existingSpot, nil)
 				pm.On("Create", mock.MatchedBy(func(p *entities.Post) bool {
-					return p.SpotID.Value() == 1 // 既存IDが使われているか検証
+					return p.SpotID.Value() == 1
 				})).Return(dummyPost, nil)
 			},
 			wantErr: false,
@@ -110,6 +117,55 @@ func TestRegisterSpotPost_Execute(t *testing.T) {
 				assert.Equal(t, 99, out.SpotID)
 			},
 		},
+		// --- ここから追加した複雑なテストケース ---
+		{
+			name: "【正常系】第3のユーザー（ハッカー）が極端な座標（境界値）で新規地点を登録する",
+			input: usecase.RegisterSpotPostInput{
+				Token: "hacker_token", SpotName: "極地の店", Latitude: 90.0, Longitude: 180.0, ImageURL: "http://example.com/edge.jpg", Caption: "極地到達",
+			},
+			setupMock: func(am *MockAuthService, sm *MockSpotRepository, pm *MockPostRepository) {
+				am.On("VerifyToken", mock.Anything, "hacker_token").Return(hacker, nil)
+				sm.On("FindByLocation", mock.Anything, 90.0, 180.0).Return((*entities.Spot)(nil), nil)
+				sm.On("Create", mock.Anything).Return(edgeSpot, nil)
+				pm.On("Create", mock.MatchedBy(func(p *entities.Post) bool {
+					return p.SpotID.Value() == 88 && p.UserID.Value() == 3
+				})).Return(hackerPost, nil)
+			},
+			wantErr: false,
+			check: func(t *testing.T, out *usecase.RegisterSpotPostOutput) {
+				assert.Equal(t, 88, out.SpotID)
+			},
+		},
+		{
+			name: "【正常系】キャプションが空文字でも正常に合流して投稿される",
+			input: usecase.RegisterSpotPostInput{
+				Token: "valid_token", Latitude: 35.6467, Longitude: 139.7101, ImageURL: "http://example.com/empty.jpg", Caption: "",
+			},
+			setupMock: func(am *MockAuthService, sm *MockSpotRepository, pm *MockPostRepository) {
+				am.On("VerifyToken", mock.Anything, "valid_token").Return(malloy, nil)
+				sm.On("FindByLocation", mock.Anything, 35.6467, 139.7101).Return(existingSpot, nil)
+				pm.On("Create", mock.Anything).Return(emptyCaptionPost, nil)
+			},
+			wantErr: false,
+			check: func(t *testing.T, out *usecase.RegisterSpotPostOutput) {
+				assert.Equal(t, 1, out.SpotID)
+			},
+		},
+		{
+			name: "【異常系】新規Spot保存時にDBエラーが発生した場合、Post作成に進まずロールバックする",
+			input: usecase.RegisterSpotPostInput{
+				Token: "valid_token", SpotName: "エラー店", Latitude: 35.1, Longitude: 135.1,
+			},
+			setupMock: func(am *MockAuthService, sm *MockSpotRepository, pm *MockPostRepository) {
+				am.On("VerifyToken", mock.Anything, "valid_token").Return(malloy, nil)
+				sm.On("FindByLocation", mock.Anything, 35.1, 135.1).Return((*entities.Spot)(nil), nil)
+				// SpotのCreateでエラー発生
+				sm.On("Create", mock.Anything).Return((*entities.Spot)(nil), errors.New("spot insert error"))
+				// 注意: PostのCreateは呼ばれないのでMock定義をしない
+			},
+			wantErr: true,
+		},
+		// --- ここまで ---
 		{
 			name: "【異常系】トークンが不正な場合、エラーを返す",
 			input: usecase.RegisterSpotPostInput{Token: "invalid_token"},

@@ -26,22 +26,12 @@ func (m *DistillMockAuthService) VerifyToken(ctx context.Context, token string) 
 	}
 	return args.Get(0).(*entities.User), args.Error(1)
 }
-
-func (m *DistillMockAuthService) HashPassword(password string) (string, error) {
-	return "", nil
-}
-
-func (m *DistillMockAuthService) VerifyPassword(hashed value_objects.HashedPassword, rawPassword string) error {
-	return nil
-}
-
-func (m *DistillMockAuthService) IssueToken(ctx context.Context, user *entities.User) (string, error) {
-	return "", nil
-}
+func (m *DistillMockAuthService) HashPassword(password string) (string, error) { return "", nil }
+func (m *DistillMockAuthService) VerifyPassword(hashed value_objects.HashedPassword, rawPassword string) error { return nil }
+func (m *DistillMockAuthService) IssueToken(ctx context.Context, user *entities.User) (string, error) { return "", nil }
 
 func (m *MockRecommendationService) Distill(ctx context.Context, u *entities.User, lat value_objects.Latitude, lng value_objects.Longitude) (*entities.Spot, value_objects.TotalScore, value_objects.ResonanceCount, value_objects.DensityScore, value_objects.Reason, []*entities.Post, error) {
 	args := m.Called(ctx, u, lat, lng)
-	// 戻り値が多いので、それぞれ慎重にキャストして返します
 	spot, _ := args.Get(0).(*entities.Spot)
 	total, _ := args.Get(1).(value_objects.TotalScore)
 	res, _ := args.Get(2).(value_objects.ResonanceCount)
@@ -59,10 +49,10 @@ func (p *MockDistillPresenter) Output(s *entities.Spot, ts value_objects.TotalSc
 		Recommendation: &usecase.RecommendationResult{
 			Spot: usecase.SpotOutput{ID: s.ID.Value(), Name: s.Name.String()},
 			DistillationAnalysis: usecase.AnalysisOutput{
-				TotalScore: ts.Float64(),
+				TotalScore:     ts.Float64(),
 				ResonanceScore: rc.Int(),
-				DensityScore: ds.Int(),
-				Reason: r.String(),
+				DensityScore:   ds.Int(),
+				Reason:         r.String(),
 			},
 		},
 	}
@@ -74,12 +64,17 @@ func TestDistillRecommendation_Execute(t *testing.T) {
 	// 共通データ準備
 	malloy, _ := entities.NewUser(2, "local_malloy", "malloy@example.com", "hashed_password")
 	bobSpot, _ := entities.NewSpot(1, "ボブの隠れ家", 35.6467, 139.7101, 1)
-	
-	// Value Objects の準備（エラーハンドリングは省略）
-	ts, _ := value_objects.NewTotalScore(2.5)
-	rc, _ := value_objects.NewResonanceCount(1)
-	ds, _ := value_objects.NewDensityScore(1)
-	reason, _ := value_objects.NewReason("共鳴による蒸留結果です")
+
+	// Value Objects の準備
+	tsNormal, _ := value_objects.NewTotalScore(2.5)
+	rcNormal, _ := value_objects.NewResonanceCount(1)
+	dsNormal, _ := value_objects.NewDensityScore(1)
+	reasonNormal, _ := value_objects.NewReason("共鳴による蒸留結果です")
+
+	tsHigh, _ := value_objects.NewTotalScore(15.8) // 熱狂状態の高スコア
+	rcHigh, _ := value_objects.NewResonanceCount(4)  // 複数人の共鳴
+	reasonHigh, _ := value_objects.NewReason("強い共鳴（熱狂）を検知しました")
+
 	zeroTS, _ := value_objects.NewTotalScore(0)
 	zeroRC, _ := value_objects.NewResonanceCount(0)
 	zeroDS, _ := value_objects.NewDensityScore(0)
@@ -99,15 +94,34 @@ func TestDistillRecommendation_Execute(t *testing.T) {
 			},
 			setupMock: func(am *DistillMockAuthService, rs *MockRecommendationService) {
 				am.On("VerifyToken", mock.Anything, "valid_token").Return(malloy, nil)
-				// Domain Service の Distill が呼ばれることを期待
 				rs.On("Distill", mock.Anything, malloy, mock.Anything, mock.Anything).
-					Return(bobSpot, ts, rc, ds, reason, []*entities.Post{}, nil)
+					Return(bobSpot, tsNormal, rcNormal, dsNormal, reasonNormal, []*entities.Post{}, nil)
 			},
 			wantErr: false,
 			check: func(t *testing.T, out *usecase.DistillRecommendationResponse) {
 				assert.NotNil(t, out.Recommendation)
 				assert.Equal(t, "ボブの隠れ家", out.Recommendation.Spot.Name)
 				assert.Equal(t, 2.5, out.Recommendation.DistillationAnalysis.TotalScore)
+				assert.Equal(t, 1, out.Recommendation.DistillationAnalysis.ResonanceScore)
+			},
+		},
+		{
+			name: "【正常系】複数人の共鳴により、高いスコア(熱狂)の蒸留結果を返す",
+			input: usecase.DistillRecommendationInput{
+				Token: "valid_token", Latitude: 35.6467, Longitude: 139.7101,
+			},
+			setupMock: func(am *DistillMockAuthService, rs *MockRecommendationService) {
+				am.On("VerifyToken", mock.Anything, "valid_token").Return(malloy, nil)
+				// 強い共鳴結果を返すモック
+				rs.On("Distill", mock.Anything, malloy, mock.Anything, mock.Anything).
+					Return(bobSpot, tsHigh, rcHigh, dsNormal, reasonHigh, []*entities.Post{}, nil)
+			},
+			wantErr: false,
+			check: func(t *testing.T, out *usecase.DistillRecommendationResponse) {
+				assert.NotNil(t, out.Recommendation)
+				assert.Equal(t, 15.8, out.Recommendation.DistillationAnalysis.TotalScore)
+				assert.Equal(t, 4, out.Recommendation.DistillationAnalysis.ResonanceScore)
+				assert.Contains(t, out.Recommendation.DistillationAnalysis.Reason, "熱狂")
 			},
 		},
 		{
@@ -120,7 +134,7 @@ func TestDistillRecommendation_Execute(t *testing.T) {
 			},
 			wantErr: false,
 			check: func(t *testing.T, out *usecase.DistillRecommendationResponse) {
-				assert.Nil(t, out) // Interactor のロジック通り nil が返るか
+				assert.Nil(t, out)
 			},
 		},
 		{
@@ -133,11 +147,31 @@ func TestDistillRecommendation_Execute(t *testing.T) {
 		},
 		{
 			name: "【異常系】不正な座標（緯度）が渡された場合、バリデーションで弾く",
-			input: usecase.DistillRecommendationInput{Token: "valid_token", Latitude: 100.0, Longitude: 0},
+			input: usecase.DistillRecommendationInput{Token: "valid_token", Latitude: 100.0, Longitude: 139.0},
 			setupMock: func(am *DistillMockAuthService, rs *MockRecommendationService) {
 				am.On("VerifyToken", mock.Anything, "valid_token").Return(malloy, nil)
+				// Distillは呼ばれないはず
 			},
-			wantErr: true, // Latitude の NewLatitude でエラーになるはず
+			wantErr: true,
+		},
+		{
+			name: "【異常系】不正な座標（経度）が渡された場合、バリデーションで弾く",
+			input: usecase.DistillRecommendationInput{Token: "valid_token", Latitude: 35.0, Longitude: 200.0},
+			setupMock: func(am *DistillMockAuthService, rs *MockRecommendationService) {
+				am.On("VerifyToken", mock.Anything, "valid_token").Return(malloy, nil)
+				// Distillは呼ばれないはず
+			},
+			wantErr: true,
+		},
+		{
+			name: "【異常系】蒸留処理(Domain Service)の内部でエラーが発生した場合",
+			input: usecase.DistillRecommendationInput{Token: "valid_token", Latitude: 35.6, Longitude: 139.7},
+			setupMock: func(am *DistillMockAuthService, rs *MockRecommendationService) {
+				am.On("VerifyToken", mock.Anything, "valid_token").Return(malloy, nil)
+				rs.On("Distill", mock.Anything, malloy, mock.Anything, mock.Anything).
+					Return((*entities.Spot)(nil), zeroTS, zeroRC, zeroDS, noReason, []*entities.Post{}, errors.New("internal recommendation error"))
+			},
+			wantErr: true,
 		},
 	}
 
@@ -146,7 +180,7 @@ func TestDistillRecommendation_Execute(t *testing.T) {
 			am := new(DistillMockAuthService)
 			rs := new(MockRecommendationService)
 			tt.setupMock(am, rs)
-			
+
 			interactor := usecase.NewDistillRecommendationInteractor(&MockDistillPresenter{}, rs, am)
 
 			out, err := interactor.Execute(context.Background(), tt.input)
