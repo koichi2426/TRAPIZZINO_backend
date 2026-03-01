@@ -19,7 +19,7 @@ VPS上でリポジトリをクローンし、プロジェクトディレクト�
 
 ```bash
 git clone https://github.com/koichi2426/Reso_backend.git
-cd TRAPIZZINO_backend
+cd Reso_backend
 
 ```
 
