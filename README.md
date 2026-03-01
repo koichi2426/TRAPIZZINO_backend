@@ -36,14 +36,12 @@ git pull origin main
 
 ```bash
 cp app/.env.example app/.env
-# Vimで編集
+# 必要に応じて編集
 vi app/.env
 
 ```
 
 ### 3. コンテナのビルドと起動
-
-環境によってコマンドが異なるため、動く方を実行してください。
 
 ```bash
 # パターンA (最新のDocker)
@@ -51,7 +49,6 @@ docker compose up -d --build
 
 # パターンB (旧バージョン)
 docker-compose up -d --build
-
 ```
 
 ### 4. データベースマイグレーション
@@ -72,20 +69,34 @@ atlas migrate apply \
 
 ### 5. 動作確認
 
-正常にデプロイされたか、2つの環境から確認します。
-
-#### A. 内部確認（VPS内から実行）
-
 ```bash
+# 内部確認（VPS内）
 curl http://127.0.0.1:8000/health
 
 ```
 
-#### B. 外部確認（手元のMacなどから実行）
+---
+
+## 🧪 テストの実行
+
+本プロジェクトは `go-sqlmock` を採用しており、DBコンテナを起動していない状態でもロジックの正確性を高速に検証可能です。
+
+### 1. 依存関係の解決（初回のみ）
 
 ```bash
-# api.example.com はご自身のドメインに読み替えてください
-curl https://api.example.com/health
+cd app
+go mod download
+
+```
+
+### 2. テストの実行
+
+```bash
+# 全ユースケースのテストを一括実行
+go test -v ./src/usecase/...
+
+# 特定のテスト（例：自動合流ロジック）のみ実行
+go test -v ./src/usecase/ -run TestRegisterSpotPost
 
 ```
 
@@ -93,11 +104,9 @@ curl https://api.example.com/health
 
 ## 🧹 Docker環境の完全リセット手順
 
-開発中に環境を完全に真っさらにしたい場合（コンテナ、イメージ、ボリューム、ネットワークの全削除）は、以下の手順を実行してください。
+開発中に環境を完全に真っさらにしたい場合は、以下の手順を実行してください。
 
 ### 1. 全リソースの削除
-
-実行中のコンテナを強制停止し、すべてのデータを抹消します。
 
 ```bash
 # 全コンテナの強制停止・削除
@@ -113,15 +122,8 @@ docker volume rm $(docker volume ls -q)
 
 ### 2. 削除後の確認
 
-以下のコマンドですべてが **0B** または空であることを確認してください。
-
 ```bash
 # リソース使用状況のサマリー確認
 docker system df
-
-# 個別確認
-docker ps -a
-docker images
-docker volume ls
 
 ```
