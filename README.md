@@ -18,7 +18,7 @@ curl -sSf https://atlasgo.sh | sh
 VPS上でリポジトリをクローンし、プロジェクトディレクトリへ移動します。
 
 ```bash
-git clone https://github.com/koichi2426/TRAPIZZINO_backend.git
+git clone https://github.com/koichi2426/Reso_backend.git
 cd TRAPIZZINO_backend
 
 ```
