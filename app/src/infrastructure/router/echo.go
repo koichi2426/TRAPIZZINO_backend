@@ -37,8 +37,12 @@ func InitRoutes(e *echo.Echo, db *sql.DB) {
 	// 3. ユースケースの初期化
 	authLoginUsecase := usecase.NewAuthLoginInteractor(authPresenter, userRepo, authService)
 	userSignupUsecase := usecase.NewUserSignupInteractor(userSignupPresenter, userRepo, authService)
-	registerSpotUsecase := usecase.NewRegisterSpotPostInteractor(meshSpotPresenter, spotRepo, postRepo)
-	listMySpotsUsecase := usecase.NewListMySpotsInteractor(userSpotPresenter, spotRepo, postRepo)
+	
+	// 【修正】第4引数に authService を追加
+	registerSpotUsecase := usecase.NewRegisterSpotPostInteractor(meshSpotPresenter, spotRepo, postRepo, authService)
+	
+	// 【修正】authService を追加し、トークンからユーザーを特定できるようにします
+	listMySpotsUsecase := usecase.NewListMySpotsInteractor(userSpotPresenter, spotRepo, postRepo, authService)
 	
 	distillRecommendationUsecase := usecase.NewDistillRecommendationInteractor(
 		recommendationPresenter, 
@@ -50,8 +54,8 @@ func InitRoutes(e *echo.Echo, db *sql.DB) {
 	authController := controller.NewAuthController(authLoginUsecase)
 	userController := controller.NewUserController(userSignupUsecase)
 	
-	// 【修正】第2引数に authService を追加して、トークン検証を可能にします
-	meshSpotController := controller.NewMeshSpotController(registerSpotUsecase, authService)
+	// 【修正】コントローラーはユースケースにトークンを渡すだけにするので、authService の注入は不要に
+	meshSpotController := controller.NewMeshSpotController(registerSpotUsecase)
 	
 	userSpotController := controller.NewUserSpotController(listMySpotsUsecase)
 	recommendationController := controller.NewRecommendationController(distillRecommendationUsecase)

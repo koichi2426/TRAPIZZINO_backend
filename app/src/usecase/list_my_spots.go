@@ -3,11 +3,12 @@ package usecase
 import (
 	"context"
 	"app/domain/entities"
+	"app/domain/services"
 	"app/domain/value_objects"
 )
 
 type ListMySpotsInput struct {
-	UserID int
+	Token string
 }
 
 type SpotPostPair struct {
@@ -31,22 +32,30 @@ type listMySpotsInteractor struct {
 	presenter ListMySpotsPresenter
 	spotRepo  entities.SpotRepository
 	postRepo  entities.PostRepository
+	authService services.AuthDomainService
 }
 
 func NewListMySpotsInteractor(
 	p ListMySpotsPresenter, 
 	s entities.SpotRepository, 
 	r entities.PostRepository,
+	a services.AuthDomainService,
 ) ListMySpotsUseCase {
 	return &listMySpotsInteractor{
-		presenter: p,
-		spotRepo:  s,
-		postRepo:  r,
+		presenter:   p,
+		spotRepo:    s,
+		postRepo:    r,
+		authService: a,
 	}
 }
 
 func (i *listMySpotsInteractor) Execute(ctx context.Context, input ListMySpotsInput) (*ListMySpotsOutput, error) {
-	userID, err := value_objects.NewID(input.UserID)
+	user, err := i.authService.VerifyToken(ctx, input.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	userID, err := value_objects.NewID(user.ID.Value())
 	if err != nil {
 		return nil, err
 	}
