@@ -18,9 +18,8 @@ func NewSpotRepository(db *sql.DB) entities.SpotRepository {
 	return &spotRepository{db: db}
 }
 
-// 【修正】ST_DWithin(1m) ではなく、MeshID による厳密な区画判定に変更
+// --- STEP 1: 空間の量子化に基づく検索 ---
 func (r *spotRepository) FindByLocation(ctx context.Context, lat, lng float64) (*entities.Spot, error) {
-	// 緯度経度から MeshID を生成
 	meshVO, _ := value_objects.NewMeshID(lat, lng)
 
 	query := `
@@ -43,12 +42,12 @@ func (r *spotRepository) FindByLocation(ctx context.Context, lat, lng float64) (
 	return entities.NewSpot(sid, name, rLat, rLng, uid)
 }
 
-// 【修正】ON CONFLICT から registered_user_id を削除。MeshID のみで一意性を担保。
+// --- STEP 2: 意志の介在（MeshIDによる一意性の担保と上書き） ---
 func (r *spotRepository) Create(spot *entities.Spot) (*entities.Spot, error) {
 	query := `INSERT INTO spots (name, mesh_id, location, registered_user_id) 
     VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), $5)
     ON CONFLICT (mesh_id) DO UPDATE 
-    SET name = EXCLUDED.name, location = EXCLUDED.location 
+    SET name = EXCLUDED.name, location = EXCLUDED.location, registered_user_id = EXCLUDED.registered_user_id
     RETURNING id`
 
 	var id int
@@ -67,7 +66,58 @@ func (r *spotRepository) Create(spot *entities.Spot) (*entities.Spot, error) {
 	return spot, nil
 }
 
-// --- 以下、変更なしのメソッド群 ---
+// --- STEP 3: 共鳴者の特定（店舗IDの完全一致による抽出） ---
+func (r *spotRepository) FindResonantUsersWithMatchCount(ctx context.Context, userID value_objects.ID) ([]entities.ResonantUser, error) {
+	query := `
+        SELECT p.user_id, COUNT(DISTINCT s.id) as match_count 
+        FROM posts p
+        JOIN spots s ON p.spot_id = s.id
+        WHERE s.id IN (
+            SELECT p2.spot_id 
+            FROM posts p2 
+            WHERE p2.user_id = $1
+        )
+        AND p.user_id != $1
+        GROUP BY p.user_id`
+
+	rows, err := r.db.QueryContext(ctx, query, userID.Value())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []entities.ResonantUser
+	for rows.Next() {
+		var uid, count int
+		if err := rows.Scan(&uid, &count); err != nil {
+			return nil, err
+		}
+		idVO, _ := value_objects.NewID(uid)
+		result = append(result, entities.ResonantUser{ID: idVO, MatchCount: count})
+	}
+	return result, nil
+}
+
+// --- STEP 3: 激戦区度の算定（延べ投稿数による熱量の可視化） ---
+func (r *spotRepository) GetDensityScoreByMesh(ctx context.Context, meshID value_objects.MeshID) (value_objects.DensityScore, error) {
+	// 現在の王座だけでなく、過去の上書きを含めた全投稿数をカウント
+	query := `
+        SELECT count(*) 
+        FROM posts p
+        JOIN spots s ON p.spot_id = s.id
+        WHERE s.mesh_id = $1`
+	
+	var count int
+	err := r.db.QueryRowContext(ctx, query, meshID.String()).Scan(&count)
+	if err != nil {
+		score, _ := value_objects.NewDensityScore(0)
+		return score, err
+	}
+	score, _ := value_objects.NewDensityScore(count)
+	return score, nil
+}
+
+// --- 以下、ユーティリティメソッド群 ---
 
 func (r *spotRepository) FindByID(ctx context.Context, id value_objects.ID) (*entities.Spot, error) {
 	query := `SELECT id, name, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id FROM spots WHERE id = $1`
@@ -103,38 +153,6 @@ func (r *spotRepository) FindByMeshID(meshID value_objects.MeshID) ([]*entities.
 	return spots, nil
 }
 
-func (r *spotRepository) FindResonantUsersWithMatchCount(ctx context.Context, userID value_objects.ID) ([]entities.ResonantUser, error) {
-	query := `
-        SELECT p.user_id, COUNT(DISTINCT s.mesh_id) as match_count 
-        FROM posts p
-        JOIN spots s ON p.spot_id = s.id
-        WHERE s.mesh_id IN (
-            SELECT s2.mesh_id 
-            FROM posts p2 
-            JOIN spots s2 ON p2.spot_id = s2.id 
-            WHERE p2.user_id = $1
-        )
-        AND p.user_id != $1
-        GROUP BY p.user_id`
-
-	rows, err := r.db.QueryContext(ctx, query, userID.Value())
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var result []entities.ResonantUser
-	for rows.Next() {
-		var uid, count int
-		if err := rows.Scan(&uid, &count); err != nil {
-			return nil, err
-		}
-		idVO, _ := value_objects.NewID(uid)
-		result = append(result, entities.ResonantUser{ID: idVO, MatchCount: count})
-	}
-	return result, nil
-}
-
 func (r *spotRepository) FindSpotsByMeshAndUsers(ctx context.Context, meshIDs []value_objects.MeshID, userIDs []value_objects.ID) ([]*entities.Spot, error) {
 	query := `SELECT id, name, mesh_id, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id 
               FROM spots WHERE mesh_id = ANY($1) AND registered_user_id = ANY($2)`
@@ -166,18 +184,6 @@ func (r *spotRepository) FindSpotsByMeshAndUsers(ctx context.Context, meshIDs []
 		spots = append(spots, s)
 	}
 	return spots, nil
-}
-
-func (r *spotRepository) GetDensityScoreByMesh(ctx context.Context, meshID value_objects.MeshID) (value_objects.DensityScore, error) {
-	query := `SELECT count(*) FROM spots WHERE mesh_id = $1`
-	var count int
-	err := r.db.QueryRowContext(ctx, query, meshID.String()).Scan(&count)
-	if err != nil {
-		score, _ := value_objects.NewDensityScore(0)
-		return score, err
-	}
-	score, _ := value_objects.NewDensityScore(count)
-	return score, nil
 }
 
 func (r *spotRepository) FindPostsBySpot(ctx context.Context, spotID value_objects.ID) ([]*entities.Post, error) {
