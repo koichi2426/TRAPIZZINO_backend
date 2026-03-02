@@ -17,13 +17,11 @@ CREATE TABLE spots (
     name VARCHAR(255) NOT NULL,
     mesh_id VARCHAR(50) NOT NULL, 
     location GEOGRAPHY(POINT, 4326) NOT NULL,
-    -- 最初にこのスポット（メッシュ）を登録したユーザーを保持
+    -- 【重要】現在のメッシュの「王座（最新の投稿者）」を指す
     registered_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
-    -- 【修正】一意制約を mesh_id 単体に変更
-    -- これにより、誰が投稿しても同じ場所なら conflict が発生し、Go側の ON CONFLICT (mesh_id) が動作します
     CONSTRAINT unique_mesh_per_location UNIQUE (mesh_id)
 );
 
@@ -33,7 +31,8 @@ CREATE TABLE posts (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     spot_id INTEGER NOT NULL REFERENCES spots(id) ON DELETE CASCADE,
     username VARCHAR(255) NOT NULL, 
-    image_url TEXT,
+    -- 【修正】NULLを明示的に許容。画像なし投稿に対応。
+    image_url TEXT DEFAULT NULL,
     caption TEXT NOT NULL,
     posted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -41,13 +40,12 @@ CREATE TABLE posts (
 
 -- 5. インデックスの作成
 CREATE INDEX idx_spots_location ON spots USING GIST (location);
--- UNIQUE制約（unique_mesh_per_location）により mesh_id のインデックスは自動生成されるため、明示的な作成は不要
 CREATE INDEX idx_posts_user_id ON posts (user_id);
 CREATE INDEX idx_posts_spot_id ON posts (spot_id);
--- 共鳴者検索（FindResonantUsers）を高速化するための複合インデックス
-CREATE INDEX idx_spots_user_mesh ON spots (registered_user_id, mesh_id);
+-- 【修正】店舗ID（spot_id）ベースの共鳴者検索を高速化
+CREATE INDEX idx_posts_user_spot ON posts (user_id, spot_id);
 
--- 6. 更新日時自動更新用の関数とトリガー
+-- 6. 更新日時自動更新
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
