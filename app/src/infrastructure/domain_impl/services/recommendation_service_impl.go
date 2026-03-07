@@ -52,19 +52,24 @@ func (s *RecommendationServiceImpl) Distill(
 	// --- STEP 2: 意志の介在（※ドメイン制約） ---
 	// 本ステップは「登録時の上書き強制」により既にDB側で純度が担保されているものとする。
 
-	// --- STEP 3: 共鳴者の特定と探索近傍の画定 ---
-	// 「計9メッシュ」をスキャンし、同じスロットで同じ店を選んだ「共鳴者」を抽出。
-	resonantUsers, err := s.spotRepo.FindResonantUsersWithMatchCount(ctx, user.ID)
-	if err != nil {
-		return emptySpot, emptyScore, emptyRes, emptyDen, emptyReason, emptyPosts, err
-	}
-	if len(resonantUsers) == 0 {
-		return emptySpot, emptyScore, emptyRes, emptyDen, emptyReason, emptyPosts, fmt.Errorf("no resonant users found")
-	}
+	// --- STEP 3: 共鳴者（メンター）の特定 ---
+    // 探索範囲を「今いる場所」に限定せず、地球全域の全スロットを対象にスキャン。
+    // 過去に一度でも「同じ場所で同じ店」をベストに選んだことがある全ユーザーを、
+    // あなたの感性とシンクロする「共鳴者（メンター）」として抽出する。
+    // MatchCountは場所を問わない通算の一致数であり、その人の審美眼に対する「信頼の厚さ」となる。
+    resonantUsers, err := s.spotRepo.FindResonantUsersWithMatchCount(ctx, user.ID)
+    if err != nil {
+        return emptySpot, emptyScore, emptyRes, emptyDen, emptyReason, emptyPosts, err
+    }
+    if len(resonantUsers) == 0 {
+        return emptySpot, emptyScore, emptyRes, emptyDen, emptyReason, emptyPosts, fmt.Errorf("no resonant users found")
+    }
 
-	// --- STEP 4: 共鳴による「メッシュ代表店」の選定 ---
-	// 9つの各メッシュにおいて、最も共鳴度が高いユーザーが選んでいる1軒を「正解」として採用。
-	targetMeshes := append([]value_objects.MeshID{currentMesh}, currentMesh.GetSurroundingMeshIDs()...)
+    // --- STEP 4: 探索近傍（周辺9メッシュ）へのフォーカス ---
+    // 全世界から抽出された「信頼できる共鳴者」たちのデータの中から、
+    // 現在地を中心とした「周辺9メッシュ」に絞り込み、彼らがそこで選んでいる店をかき集める。
+    // つまり、「世界中でセンスが証明された人」に「今ここでの正解」を問うプロセスである。
+    targetMeshes := append([]value_objects.MeshID{currentMesh}, currentMesh.GetSurroundingMeshIDs()...)
 
 	resonanceMap := make(map[int]int)
 	resonantIDs := make([]value_objects.ID, 0, len(resonantUsers))
