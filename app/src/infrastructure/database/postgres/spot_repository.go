@@ -152,6 +152,7 @@ func (r *spotRepository) FindByMeshID(meshID value_objects.MeshID) ([]*entities.
 func (r *spotRepository) FindSpotByMeshAndUser(ctx context.Context, meshID value_objects.MeshID, userID value_objects.ID) (*entities.Spot, error) {
 	query := `SELECT id, name, mesh_id, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id
 	          FROM spots WHERE mesh_id = $1 AND registered_user_id = $2
+	          ORDER BY created_at DESC, id DESC
 	          LIMIT 1`
 
 	var sid, uid int
