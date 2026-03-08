@@ -143,4 +143,5 @@ SELECT '--- SPOTS ---' AS table_name;
 SELECT id, name, mesh_id, ST_AsText(location) as location, registered_user_id, created_at FROM spots;
 SELECT '--- POSTS ---' AS table_name;
 SELECT * FROM posts;
+"
 ```
