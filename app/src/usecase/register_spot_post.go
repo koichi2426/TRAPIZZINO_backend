@@ -3,13 +3,11 @@ package usecase
 import (
 	"app/src/domain/entities"
 	"app/src/domain/services"
+	"app/src/domain/value_objects"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 )
-
-var ErrSpotAlreadyExists = errors.New("conflict: spot already exists at this location")
 
 type RegisterSpotPostInput struct {
 	Token     string
@@ -19,18 +17,42 @@ type RegisterSpotPostInput struct {
 	Longitude float64
 	ImageURL  string
 	Caption   string
+	// Overwrite=true のときは「登録先Spot」を再解決し（存在すれば利用、なければ作成）、
+	// かつそのSpotに対する自分の既存投稿を入れ替えて新規投稿を1件作成する。
+	// Overwrite=false のときは上記店舗への新規投稿を行わず、既存店舗情報のみ返す。
 	Overwrite bool
 }
 
-// MeshID をレスポンスに含めるように拡張
 type RegisterSpotPostOutput struct {
-	SpotID int
-	PostID int
-	MeshID string // 👈 追加
+	Message         string                       `json:"message,omitempty"`
+	HasExistingInfo bool                         `json:"has_existing_info"`
+	Spot            RegisterSpotPostSpotPayload  `json:"spot"`
+	Post            *RegisterSpotPostPostPayload `json:"post,omitempty"`
+}
+
+type RegisterSpotPostSpotPayload struct {
+	ID       int                             `json:"id"`
+	Name     string                          `json:"name"`
+	MeshID   string                          `json:"mesh_id"`
+	Location RegisterSpotPostLocationPayload `json:"location"`
+}
+
+type RegisterSpotPostLocationPayload struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+type RegisterSpotPostPostPayload struct {
+	ID       int    `json:"id"`
+	UserName string `json:"user_name"`
+	ImageURL string `json:"image_url"`
+	Caption  string `json:"caption"`
+	PostedAt string `json:"posted_at"`
 }
 
 type RegisterSpotPostPresenter interface {
 	Output(spot *entities.Spot, post *entities.Post) *RegisterSpotPostOutput
+	OutputExisting(spot *entities.Spot, post *entities.Post) *RegisterSpotPostOutput
 }
 
 type RegisterSpotPostUseCase interface {
@@ -60,25 +82,118 @@ func NewRegisterSpotPostInteractor(
 
 func (i *registerSpotPostInteractor) Execute(ctx context.Context, input RegisterSpotPostInput) (*RegisterSpotPostOutput, error) {
 	// 1. ユーザーの特定（認証）
+	// 入力トークンを検証して、投稿者ユーザーを確定する。
 	user, err := i.authService.VerifyToken(ctx, input.Token)
 	if err != nil {
+		// トークン不正・期限切れなどはユースケース全体を失敗させる。
 		return nil, fmt.Errorf("auth error: %w", err)
 	}
 
-	// 2. 座標による同一店舗の特定
+	// 2. 座標から mesh_id を算出する。
+	meshID, err := value_objects.NewMeshID(input.Latitude, input.Longitude)
+	if err != nil {
+		return nil, fmt.Errorf("mesh id creation error: %w", err)
+	}
+
+	// 3. そのメッシュで、投稿者自身が過去に登録した Spot があるか確認する。
+	userSpotInMesh, err := i.spotRepo.FindSpotByMeshAndUser(ctx, meshID, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("repository error: %w", err)
+	}
+	hasExistingInfo := userSpotInMesh != nil
+
+	if userSpotInMesh != nil {
+		targetSpot := userSpotInMesh
+		if !input.Overwrite {
+			// ユーザーの過去登録がある場合で overwrite=false なら、投稿は作らず既存情報を返す。
+			posts, err := i.postRepo.FindBySpotID(targetSpot.ID)
+			if err != nil {
+				return nil, fmt.Errorf("post lookup error: %w", err)
+			}
+
+			var latestUserPost *entities.Post
+			for _, p := range posts {
+				if p.UserID.Value() != user.ID.Value() {
+					continue
+				}
+				if latestUserPost == nil || p.PostedAt.After(latestUserPost.PostedAt) {
+					latestUserPost = p
+				}
+			}
+
+			if latestUserPost != nil {
+				return i.presenter.OutputExisting(targetSpot, latestUserPost), nil
+			}
+
+			// ユーザー過去登録はあるが過去投稿がない場合は、入力座標ベースの通常フローに進む。
+		} else {
+			// overwrite=true: 既存Spotの属性は変更せず、入力地点に対応するSpotを再解決する。
+			resolvedSpot, err := i.spotRepo.FindByLocation(ctx, input.Latitude, input.Longitude)
+			if err != nil {
+				return nil, fmt.Errorf("repository error: %w", err)
+			}
+			if resolvedSpot == nil {
+				newSpot, err := entities.NewSpot(0, input.SpotName, input.Latitude, input.Longitude, user.ID.Value())
+				if err != nil {
+					return nil, fmt.Errorf("entity creation error: %w", err)
+				}
+				resolvedSpot, err = i.spotRepo.Create(newSpot)
+				if err != nil {
+					return nil, fmt.Errorf("spot storage error: %w", err)
+				}
+			}
+
+			existingPosts, err := i.postRepo.FindBySpotID(resolvedSpot.ID)
+			if err != nil {
+				return nil, fmt.Errorf("post lookup error: %w", err)
+			}
+			for _, p := range existingPosts {
+				if p.UserID.Value() != user.ID.Value() {
+					continue
+				}
+				if err := i.postRepo.Delete(p.ID); err != nil {
+					return nil, fmt.Errorf("post replacement error: %w", err)
+				}
+			}
+
+			targetSpot = resolvedSpot
+
+			post, err := entities.NewPost(
+				0,
+				user.ID.Value(),
+				targetSpot.ID.Value(),
+				user.Username.String(),
+				input.ImageURL,
+				input.Caption,
+				time.Now(),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("post creation error: %w", err)
+			}
+
+			createdPost, err := i.postRepo.Create(post)
+			if err != nil {
+				return nil, fmt.Errorf("post storage error: %w", err)
+			}
+
+			output := i.presenter.Output(targetSpot, createdPost)
+			output.HasExistingInfo = hasExistingInfo
+			return output, nil
+		}
+	}
+
+	// 4. まだ自分の登録がない場合は、同一座標の Spot（他ユーザー登録含む）を探す。
 	existingSpot, err := i.spotRepo.FindByLocation(ctx, input.Latitude, input.Longitude)
 	if err != nil {
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 
 	var targetSpot *entities.Spot
-
 	if existingSpot != nil {
-		if !input.Overwrite {
-			return nil, ErrSpotAlreadyExists
-		}
+		// 他ユーザーの登録済み Spot があれば同一エンティティに合流する。
 		targetSpot = existingSpot
 	} else {
+		// 同一座標の Spot がない場合のみ新規作成する。
 		newSpot, err := entities.NewSpot(0, input.SpotName, input.Latitude, input.Longitude, user.ID.Value())
 		if err != nil {
 			return nil, fmt.Errorf("entity creation error: %w", err)
@@ -89,7 +204,7 @@ func (i *registerSpotPostInteractor) Execute(ctx context.Context, input Register
 		}
 	}
 
-	// 3. Post（投稿）の生成
+	// 5. Post（投稿）の生成
 	post, err := entities.NewPost(
 		0,
 		user.ID.Value(),
@@ -103,14 +218,14 @@ func (i *registerSpotPostInteractor) Execute(ctx context.Context, input Register
 		return nil, fmt.Errorf("post creation error: %w", err)
 	}
 
-	// 4. Post の永続化
+	// 6. Post の永続化
 	createdPost, err := i.postRepo.Create(post)
 	if err != nil {
 		return nil, fmt.Errorf("post storage error: %w", err)
 	}
 
-	// 5. 出力整形
-	// PresenterのOutputメソッド内で targetSpot.MeshID.String() を
-	// Output構造体の MeshID フィールドにマッピングするように実装してください
-	return i.presenter.Output(targetSpot, createdPost), nil
+	// 7. 出力整形
+	output := i.presenter.Output(targetSpot, createdPost)
+	output.HasExistingInfo = hasExistingInfo
+	return output, nil
 }

@@ -18,21 +18,19 @@ func NewSpotRepository(db *sql.DB) entities.SpotRepository {
 	return &spotRepository{db: db}
 }
 
-// --- STEP 1: 空間の量子化に基づく検索 ---
+// --- STEP 1: 同一座標に基づく検索 ---
 func (r *spotRepository) FindByLocation(ctx context.Context, lat, lng float64) (*entities.Spot, error) {
-	meshVO, _ := value_objects.NewMeshID(lat, lng)
-
 	query := `
         SELECT id, name, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id 
         FROM spots 
-        WHERE mesh_id = $1 
+	WHERE ST_X(location::geometry) = $1 AND ST_Y(location::geometry) = $2
         LIMIT 1`
 
 	var sid, uid int
 	var name string
 	var rLng, rLat float64
 
-	err := r.db.QueryRowContext(ctx, query, meshVO.String()).Scan(&sid, &name, &rLng, &rLat, &uid)
+	err := r.db.QueryRowContext(ctx, query, lng, lat).Scan(&sid, &name, &rLng, &rLat, &uid)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -42,12 +40,10 @@ func (r *spotRepository) FindByLocation(ctx context.Context, lat, lng float64) (
 	return entities.NewSpot(sid, name, rLat, rLng, uid)
 }
 
-// --- STEP 2: 意志の介在（MeshIDによる一意性の担保と上書き） ---
+// --- STEP 2: Spot の新規作成 ---
 func (r *spotRepository) Create(spot *entities.Spot) (*entities.Spot, error) {
 	query := `INSERT INTO spots (name, mesh_id, location, registered_user_id) 
-    VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), $5)
-    ON CONFLICT (mesh_id) DO UPDATE 
-    SET name = EXCLUDED.name, location = EXCLUDED.location, registered_user_id = EXCLUDED.registered_user_id
+	VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), $5)
     RETURNING id`
 
 	var id int
@@ -153,6 +149,27 @@ func (r *spotRepository) FindByMeshID(meshID value_objects.MeshID) ([]*entities.
 	return spots, nil
 }
 
+func (r *spotRepository) FindSpotByMeshAndUser(ctx context.Context, meshID value_objects.MeshID, userID value_objects.ID) (*entities.Spot, error) {
+	query := `SELECT id, name, mesh_id, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id
+	          FROM spots WHERE mesh_id = $1 AND registered_user_id = $2
+	          ORDER BY created_at DESC, id DESC
+	          LIMIT 1`
+
+	var sid, uid int
+	var name, mID string
+	var lng, lat float64
+
+	err := r.db.QueryRowContext(ctx, query, meshID.String(), userID.Value()).Scan(&sid, &name, &mID, &lng, &lat, &uid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return entities.NewSpot(sid, name, lat, lng, uid)
+}
+
 func (r *spotRepository) FindSpotsByMeshAndUsers(ctx context.Context, meshIDs []value_objects.MeshID, userIDs []value_objects.ID) ([]*entities.Spot, error) {
 	query := `SELECT id, name, mesh_id, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id 
               FROM spots WHERE mesh_id = ANY($1) AND registered_user_id = ANY($2)`
@@ -212,8 +229,21 @@ func (r *spotRepository) FindPostsBySpot(ctx context.Context, spotID value_objec
 }
 
 func (r *spotRepository) Update(spot *entities.Spot) error {
-	query := `UPDATE spots SET name = $1, location = ST_SetSRID(ST_MakePoint($2, $3), 4326) WHERE id = $4`
-	_, err := r.db.Exec(query, spot.Name.String(), spot.Longitude.Value(), spot.Latitude.Value(), spot.ID.Value())
+	query := `UPDATE spots
+	          SET name = $1,
+	              mesh_id = $2,
+	              location = ST_SetSRID(ST_MakePoint($3, $4), 4326),
+	              registered_user_id = $5
+	          WHERE id = $6`
+	_, err := r.db.Exec(
+		query,
+		spot.Name.String(),
+		spot.MeshID.String(),
+		spot.Longitude.Value(),
+		spot.Latitude.Value(),
+		spot.RegisteredUserID.Value(),
+		spot.ID.Value(),
+	)
 	return err
 }
 
