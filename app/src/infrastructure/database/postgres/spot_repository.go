@@ -171,8 +171,17 @@ func (r *spotRepository) FindSpotByMeshAndUser(ctx context.Context, meshID value
 }
 
 func (r *spotRepository) FindSpotsByMeshAndUsers(ctx context.Context, meshIDs []value_objects.MeshID, userIDs []value_objects.ID) ([]*entities.Spot, error) {
-	query := `SELECT id, name, mesh_id, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id 
-              FROM spots WHERE mesh_id = ANY($1) AND registered_user_id = ANY($2)`
+	query := `SELECT id, name, mesh_id, ST_X(location::geometry), ST_Y(location::geometry), registered_user_id
+	          FROM (
+	              SELECT id, name, mesh_id, location, registered_user_id,
+	                     ROW_NUMBER() OVER (
+	                         PARTITION BY mesh_id, registered_user_id
+	                         ORDER BY created_at DESC, id DESC
+	                     ) AS rn
+	              FROM spots
+	              WHERE mesh_id = ANY($1) AND registered_user_id = ANY($2)
+	          ) latest
+	          WHERE rn = 1`
 
 	mStrs := make([]string, len(meshIDs))
 	for i, m := range meshIDs {
