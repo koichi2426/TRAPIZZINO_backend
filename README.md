@@ -133,25 +133,27 @@ docker system df
 
 ## データーベース閲覧
 ``` 
-docker exec -it trapizzino_db psql -h 127.0.0.1 -U app_user -d trapizzino -P pager=off -c "
+docker exec -it trapizzino_db psql -h 127.0.0.1 -U app_user -d trapizzino \
+  --pset="pager=off" \
+  --pset="linestyle=unicode" \
+  --pset="border=1" \
+  -c "
 SELECT '--- USERS ---' AS section;
-SELECT id, username, email, created_at FROM users;
+SELECT id, username, email FROM users;
 
 SELECT '--- SPOTS ---' AS section;
-SELECT id, name, mesh_id, ST_AsText(location) AS lat_lng, registered_user_id FROM spots;
+SELECT id, name, mesh_id, ST_AsText(location) AS lat_lng FROM spots;
 
-SELECT '--- POSTS (with Mesh ID) ---' AS section;
+SELECT '--- ALL POSTS (1 to 197) ---' AS section;
 SELECT 
     p.id, 
-    p.user_id, 
-    p.spot_id, 
-    s.mesh_id, 
     p.username, 
+    s.mesh_id, 
     p.image_url, 
     p.caption, 
     p.posted_at 
 FROM posts p
-JOIN spots s ON p.spot_id = s.id
-ORDER BY p.posted_at DESC;
+LEFT JOIN spots s ON p.spot_id = s.id
+ORDER BY p.id ASC;
 "
 ```
